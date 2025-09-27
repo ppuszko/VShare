@@ -1,3 +1,5 @@
+# uvicorn --host 0.0.0.0 --reload app:app
+
 from fastapi import FastAPI, Depends, HTTPException, File, UploadFile
 from fastapi.responses import HTMLResponse
 from contextlib import asynccontextmanager
@@ -8,7 +10,8 @@ from pdfminer.high_level import extract_text
 from pathlib import Path
 from tools import extractor
 import os
-
+import torch
+import asyncio
 
 connection_string = static_details.DB_CONNECTION_STRING
 connect_args = {"check_same_thread": False}
@@ -17,7 +20,17 @@ engine = create_engine(connection_string)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     SQLModel.metadata.create_all(engine)
+
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        torch.cuda.synchronize()
+    
+    model = await asyncio.to_thread(extractor.load_emb_model, static_details.EMB_MODEL)
+    app.state.model = model    
     yield
+
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
 
 def get_session():
     with Session(engine) as session:
@@ -51,8 +64,6 @@ async def main():
 @app.post("/upload/")
 async def upload_file(file: UploadFile = File(...)):
     extension = Path(file.filename).suffix.lower()
-    
-    
 
     safe_filename = os.urandom(8).hex() + extension
     file_path = f"{static_details.SAVE_DIR}/{safe_filename}"
@@ -61,11 +72,16 @@ async def upload_file(file: UploadFile = File(...)):
     with open(file_path, "wb") as f:
         f.write(content)
 
-    extractor.extract_pdf(Path(file_path))
+    content = extractor.extract_pdf(Path(file_path))
+    chunks = extractor.create_chunks(content)
+
+    embeddings = extractor.get_embedding(app.state.model, chunks)
+    print(embeddings)
 
     return {
         "filename": file.filename,
         "saved_as": safe_filename,
         "content_type": file.content_type,
-        "file_extension": extension
+        "file_extension": extension,
+        "chunks size": len(chunks)
     }
