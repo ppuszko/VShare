@@ -1,0 +1,13 @@
+alembic==1.17.1
+fastapi==0.121.0
+langchain_text_splitters==1.0.0
+passlib==1.7.4
+pdfminer_six==20250506
+pdfplumber==0.11.7
+pydantic==2.12.4
+pydantic_settings==2.11.0
+PyJWT==2.10.1
+sentence_transformers==5.1.1
+SQLAlchemy==2.0.44
+sqlmodel==0.0.27
+torch==2.8.0

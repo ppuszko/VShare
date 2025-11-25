@@ -1,10 +1,11 @@
 import pdfplumber
 from pathlib import Path
 import os
-from fastapi import HTTPException
+from fastapi import HTTPException, UploadFile
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from sentence_transformers import SentenceTransformer, util
-
+from pathlib import Path
+from src.config import Config
 
 def extract_pdf(file_path: str | Path) -> str | None:
     if not Path.exists(file_path):
@@ -44,6 +45,19 @@ def create_chunks(document: str) -> list[str] | None:
 def load_emb_model(model: str) -> object:
     return SentenceTransformer(model)
 
-def get_embedding(model: SentenceTransformer, data: str | list[str]) -> list | None:
+def create_embedding(model: SentenceTransformer, data: str | list[str]) -> list | None:
     emb = model.encode(data)
     return emb
+
+
+async def save_file(file: UploadFile) -> str:
+    extension = Path(file.filename).suffix.lower()
+
+    safe_filename = os.urandom(8).hex() + extension
+    file_path = f"{Config.SAVE_DIR}/{safe_filename}"
+
+    content = await file.read()
+    with open(file_path, "wb") as f:
+        f.write(content)
+
+    return file_path

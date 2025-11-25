@@ -31,7 +31,7 @@ app = FastAPI(title="RAG_Agent", description="AI agent utilizing vector database
 
 
 @app.post("/upload/")
-async def upload_file( is_public: bool, file: UploadFile = File(...)):
+async def upload_file(file: UploadFile = File(...), is_public: bool = False):
     extension = Path(file.filename).suffix.lower()
 
     safe_filename = os.urandom(8).hex() + extension
