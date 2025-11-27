@@ -3,15 +3,13 @@ from sqlmodel import select, delete
 from src.db.models import User
 from .schemas import UserCreate, UserLogin
 from .utils import generate_hash, verify_hash
-from fastapi import HTTPException, status
 from src.errors.decorators import handle_exceptions
 from src.errors.exceptions import ForbiddenError 
 
 class UserService:
     async def get_user_by_email(self, user_email: str, session: AsyncSession) -> User | None:
         user = await session.exec(select(User).where(User.email == user_email))
-        user = user.first()
-        return user
+        return user.first()
     
     async def get_user_by_uid(self, user_uid: str, session: AsyncSession) -> User | None:
         user = await session.exec(select(User).where(User.uid == user_uid))

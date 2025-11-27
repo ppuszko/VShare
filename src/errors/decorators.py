@@ -1,6 +1,7 @@
 import functools
 from fastapi import HTTPException, status
 from .exceptions import AppError
+from src.config import Config
 
 def handle_exceptions(func):
     @functools.wraps(func)
@@ -10,6 +11,10 @@ def handle_exceptions(func):
         except AppError:
             raise
         except Exception as e:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                                detail=f"While processing request an exception occured. Exception: {e}\n")
+            if Config.APP_ENV == "DEV":
+                detail = f"Exception: {e}\n"
+            else:
+                detail = "Ooops, Something went wrong!"
+            raise AppError(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                                detail=detail)
     return wrapper

@@ -3,11 +3,17 @@ from sqlalchemy import Column, func, DateTime
 import uuid
 from datetime import datetime
 import enum
+from src.config import Config
 
 class UserRole(str, enum.Enum):
     ADMIN = "ADMIN"
     GROUP_ADMIN = "GROUP_ADMIN"
     USER = "USER"
+
+class Tier(str, enum.Enum):
+    MINI = "MINI"
+    NORMAL = "NORMAL"
+    LARGE = "LARGE"
 
 
 class Group(SQLModel, table=True):
@@ -16,8 +22,14 @@ class Group(SQLModel, table=True):
     name: str = Field(nullable=False, unique=True)
     member_limit: int = Field(nullable=False)
     member_count: int = Field(nullable=False, default=1)
+    picture_storage: str = Field(nullable=False, default=f"{Config.PICTURE_STORAGE}/default.jpg")
+    tier: Tier = Field(sa_column=Column(
+        PgEnum(Tier, name="tier"),
+        nullable=False,
+        server_default=Tier.MINI
+    ))
 
-    members: list["User"] = Relationship(back_populates="groups")
+    members: list["User"] = Relationship(back_populates="group")
 
 class User(SQLModel, table=True):
     __tablename__: str = "users"
@@ -45,7 +57,7 @@ class User(SQLModel, table=True):
         onupdate=func.now()
     ))
 
-    group: Group = Relationship(back_populates="users", sa_relationship_kwargs={"lazy":"selectin"})
+    group: Group = Relationship(back_populates="members", sa_relationship_kwargs={"lazy":"selectin"})
     
 
 

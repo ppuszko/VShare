@@ -1,17 +1,13 @@
-# uvicorn --host 0.0.0.0 --reload src.app:app
-from fastapi import FastAPI, File, UploadFile
+# uvicorn --reload src.app:app
+from fastapi import FastAPI, Request, status, HTTPException
+from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
-from pdfminer.high_level import extract_text
-from pathlib import Path
 from src.tools import processing
-import os
 import torch
 import asyncio
-from sqlmodel import SQLModel
 from .config import Config
-
-connection_string = Config.DB_URL
-
+from src.errors.exceptions import AppError
+from src.groups.routes import group_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -19,38 +15,25 @@ async def lifespan(app: FastAPI):
         torch.cuda.empty_cache()
         torch.cuda.synchronize()
     
-    model = await asyncio.to_thread(processing.load_emb_model, Config.EMB_MODEL)
-    app.state.model = model    
+    dense_model = await asyncio.to_thread(processing.load_emb_model, Config.DENSE_MODEL)
+    app.state.dense_model = dense_model    
 
     yield
 
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
 
-app = FastAPI(title="RAG_Agent", description="AI agent utilizing vector database for knowledge-based responses")
+
+app = FastAPI(
+    title="VShare",
+    description="Vectorized knowledge bank with group-level access")
+
+app.include_router(group_router, prefix=f"/groups", tags=["groups"])
 
 
-@app.post("/upload/")
-async def upload_file(file: UploadFile = File(...), is_public: bool = False):
-    extension = Path(file.filename).suffix.lower()
-
-    safe_filename = os.urandom(8).hex() + extension
-    file_path = f"{Config.SAVE_DIR}/{safe_filename}"
-
-    content = await file.read()
-    with open(file_path, "wb") as f:
-        f.write(content)
-
-    content = processing.extract_pdf(Path(file_path))
-    chunks = processing.create_chunks(content)
-
-    embeddings = processing.get_embedding(app.state.model, chunks)
-    print(f"embedding size: {len(embeddings), len(embeddings[0])}, embedding type: {type(embeddings)}")
-
-    return {
-        "filename": file.filename,
-        "saved_as": safe_filename,
-        "content_type": file.content_type,
-        "file_extension": extension,
-        "chunks size": len(chunks)
-    }
+@app.exception_handler(AppError)
+async def app_error_handler(request: Request, exc: AppError):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={"detail":exc.detail} 
+    )
