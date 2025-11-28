@@ -18,8 +18,9 @@ async def create_group(group_data: GroupCreate, session: AsyncSession = Depends(
         return GroupGet(**(group.model_dump()))
     
 
-@group_router.get("/my_group", status_code=status.HTTP_200_OK, response_model=GroupGet)
+@group_router.get("/my-group", status_code=status.HTTP_200_OK, response_model=GroupGet)
 async def get_group(group_uid: str, session: AsyncSession = Depends(get_session)):
     group = await group_service.get_group_by_uid(group_uid, session)
     if group is not None: 
         return group
+    

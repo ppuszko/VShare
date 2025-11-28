@@ -6,8 +6,8 @@ from src.db.main import get_session
 from src.db.models import User
 from sqlmodel.ext.asyncio.session import AsyncSession
 from .service import UserService
-from errors.decorators import handle_exceptions
-from errors.exceptions import NotVerifiedError, ForbiddenError, TokenInvalidError
+from src.errors.decorators import handle_exceptions
+from src.errors.exceptions import NotVerifiedError, ForbiddenError, TokenInvalidError
 
 
 user_service = UserService()

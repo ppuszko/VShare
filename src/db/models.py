@@ -5,6 +5,7 @@ from datetime import datetime
 import enum
 from src.config import Config
 
+
 class UserRole(str, enum.Enum):
     ADMIN = "ADMIN"
     GROUP_ADMIN = "GROUP_ADMIN"
@@ -37,7 +38,7 @@ class User(SQLModel, table=True):
     username: str = Field(nullable=False, unique=True)
     email: str = Field(nullable=False, unique=True)
     password_hash: str = Field(exclude=True)
-    refresh_jti_hash: str = Field(exclude=True, nullable=False)
+    refresh_jti_hash: str = Field(exclude=True, nullable=True)
     is_verified: bool = Field(default=False)
     group_uid: uuid.UUID = Field(default = None, foreign_key="groups.uid")
     role: UserRole = Field(sa_column=Column(
@@ -57,8 +58,7 @@ class User(SQLModel, table=True):
         onupdate=func.now()
     ))
 
-    group: Group = Relationship(back_populates="members", sa_relationship_kwargs={"lazy":"selectin"})
-    
+    group: Group | None = Relationship(back_populates="members", sa_relationship_kwargs={"lazy":"selectin"})
 
 
     def __repr__(self):

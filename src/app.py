@@ -8,6 +8,7 @@ import asyncio
 from .config import Config
 from src.errors.exceptions import AppError
 from src.groups.routes import group_router
+from src.auth.routes import user_router
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -28,7 +29,8 @@ app = FastAPI(
     title="VShare",
     description="Vectorized knowledge bank with group-level access")
 
-app.include_router(group_router, prefix=f"/groups", tags=["groups"])
+app.include_router(group_router, prefix="/groups", tags=["groups"])
+app.include_router(user_router, prefix="/user", tags=["users"])
 
 
 @app.exception_handler(AppError)

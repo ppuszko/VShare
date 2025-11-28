@@ -11,11 +11,11 @@ hash_context = CryptContext(
 )
 ACCESS_TOKEN_EXPIRY = 3600
 
-def generate_hash(secret: str):
+def generate_hash(secret: str) -> str:
     return hash_context.hash(secret)
 
 
-def verify_hash(secret: str, secret_hash: str):
+def verify_hash(secret: str, secret_hash: str) -> bool:
     return hash_context.verify(secret, secret_hash)
 
 def create_jwt(user_data: dict, expiry: timedelta | None = None, access: bool = True) -> str:
