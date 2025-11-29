@@ -5,10 +5,12 @@ from contextlib import asynccontextmanager
 from src.tools import processing
 import torch
 import asyncio
-from .config import Config
+from .config import Config, mail_config
 from src.errors.exceptions import AppError
 from src.groups.routes import group_router
 from src.auth.routes import user_router
+from itsdangerous import URLSafeTimedSerializer
+from fastapi_mail import FastMail
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -17,7 +19,9 @@ async def lifespan(app: FastAPI):
         torch.cuda.synchronize()
     
     dense_model = await asyncio.to_thread(processing.load_emb_model, Config.DENSE_MODEL)
-    app.state.dense_model = dense_model    
+    app.state.dense_model = dense_model  
+    app.state.verify_email_serializer = URLSafeTimedSerializer(Config.JWT_SECRET, salt="verify-email")  
+    app.state.fastmail = FastMail(mail_config)
 
     yield
 
