@@ -8,16 +8,18 @@ from src.errors.decorators import handle_exceptions
 from src.errors.exceptions import ForbiddenError 
 
 class UserService:
-    async def get_user_by_email(self, user_email: str, session: AsyncSession) -> User | None:
-        user = await session.exec(select(User).where(User.email == user_email))
-        return user.first()
-    
+
     async def get_user_by_uid(self, user_uid: str, session: AsyncSession) -> User | None:
         user = await session.exec(
             select(User)
             .options(selectinload(User.group))  # type: ignore[arg-type]
             .where(User.uid == user_uid))
         return user.one_or_none()
+
+    async def get_user_by_email(self, user_email: str, session: AsyncSession) -> User | None:
+        user = await session.exec(select(User).where(User.email == user_email))
+        return user.one_or_none()
+    
     
     async def user_exist(self, user_email: str, session: AsyncSession) -> bool:
         user = await self.get_user_by_email(user_email, session)
@@ -26,7 +28,7 @@ class UserService:
     @handle_exceptions
     async def create_user(self, user_data: UserCreate, session: AsyncSession) -> User | None:
         user_data_dict = user_data.model_dump()
-        if not await self.user_exist(user_data_dict['email'], session):
+        if (await self.user_exist(user_data_dict['email'], session)) == False:
             user_data_dict["password_hash"] = generate_hash(user_data_dict.pop("password"))
             user = User(**user_data_dict)   
 

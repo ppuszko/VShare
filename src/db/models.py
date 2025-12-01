@@ -35,7 +35,7 @@ class Group(SQLModel, table=True):
 class User(SQLModel, table=True):
     __tablename__: str = "users"
     uid: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
-    username: str = Field(nullable=False, unique=True)
+    username: str = Field(nullable=False)
     email: str = Field(nullable=False, unique=True)
     password_hash: str = Field(exclude=True)
     refresh_jti_hash: str = Field(exclude=True, nullable=True)

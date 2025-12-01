@@ -10,6 +10,7 @@ from .utils import send_mail_background, decode_url_safe_token, create_url_safe_
 from fastapi_mail import NameEmail
 from src.config import Config
 from src.errors.exceptions import BadRequest, NotFoundError
+from itsdangerous import SignatureExpired
 
 
 user_router = APIRouter()
@@ -22,7 +23,7 @@ async def create_user(user_data: UserCreate, background_tasks: BackgroundTasks, 
     if user_exists is False:
         user = await user_service.create_user(user_data, session)
         if user is not None:
-            token= create_url_safe_token({"email":user_data.email}, request.app.state.verify_email_serializer)
+            token = create_url_safe_token({"email":user_data.email}, request.app.state.verify_email_serializer)
 
             recipients = [NameEmail("", user_data.email)]
             body = generate_confirmation_template(user_data.username, f"http://{Config.DOMAIN}/users/confirm-email/{token}")
@@ -35,16 +36,20 @@ async def create_user(user_data: UserCreate, background_tasks: BackgroundTasks, 
         
     raise BadRequest("User account with this e-mail address already exists.")
 
-@user_router.post("/confirm-email/{token}", status_code=status.HTTP_200_OK)
+@user_router.get("/confirm-email/{token}", status_code=status.HTTP_200_OK)
 async def confirm_email(token: str, request: Request, session: AsyncSession = Depends(get_session)):   
-    token_data = decode_url_safe_token(token, request.app.state.verify_email_serializer)
+    try:
+        token_data = decode_url_safe_token(token, request.app.state.verify_email_serializer)
+    except SignatureExpired as e:
+        raise BadRequest(detail="This link has expired.") # TODO: implement new link generation
+
     user = await user_service.get_user_by_email(token_data.get("email"), session)
     if user is not None:
         await user_service.update_user(user, {"is_verified": True}, session)
 
         return JSONResponse(content={"message": "Your account has been succesfully verified!"})
     
-    raise NotFoundError("There is no account registered with tis e-mail address.")
+    raise NotFoundError(detail="There is no account registered with this e-mail address.")
 
 @user_router.get("/", status_code=status.HTTP_200_OK, response_model=UserGet)
 async def get_user(user_uid: str = "22b0bef9-bf64-4ac8-91cd-df7a3445c7bb", session: AsyncSession = Depends(get_session)):

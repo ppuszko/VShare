@@ -1,26 +1,21 @@
-from sqlmodel import SQLModel
+from fastapi.requests import Request
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 from sqlmodel.ext.asyncio.session import AsyncSession
 from sqlalchemy.ext.asyncio import async_sessionmaker
-from src.config import Config
 from collections.abc import AsyncGenerator
-import asyncio
-
-engine = create_async_engine(url=Config.DB_URL)
 
 
-async def init_db() -> None:
-    async with engine.begin() as conn:
-        await conn.run_sync(SQLModel.metadata.create_all)
+def init_engine(url: str) -> AsyncEngine:
+    return create_async_engine(url=url)
 
+def init_sesssionmaker(engine: AsyncEngine) -> async_sessionmaker:
+    return async_sessionmaker(
+        bind=engine,
+        class_=AsyncSession,
+        expire_on_commit=False
+    )
 
-SessionLocal = async_sessionmaker(
-    bind=engine,
-    class_=AsyncSession,
-    expire_on_commit=False
-)
-
-async def get_session() -> AsyncGenerator[AsyncSession, None]:
-    async with SessionLocal() as session:
+async def get_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
+    async with request.app.state.sessionmaker() as session:
         yield session
 

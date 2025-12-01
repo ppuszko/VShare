@@ -9,7 +9,7 @@ from pydantic import SecretStr
 from fastapi import BackgroundTasks
 from fastapi.requests import Request
 from itsdangerous import URLSafeTimedSerializer
-from errors.decorators import handle_exceptions
+from src.errors.decorators import handle_exceptions
 from typing import Any 
 
 hash_context = CryptContext(
@@ -53,13 +53,13 @@ def decode_token(token: str | None) -> dict | None:
     return None
  
 
-@handle_exceptions
+
 def create_url_safe_token(data: dict, serializer: URLSafeTimedSerializer) -> str:
     token = serializer.dumps(data)
     return token
 
-@handle_exceptions
-def decode_url_safe_token(token: str, serializer: URLSafeTimedSerializer, max_age: int = 20) -> Any:
+
+def decode_url_safe_token(token: str, serializer: URLSafeTimedSerializer, max_age: int = 1200) -> Any:
     token_data = serializer.loads(token, max_age=max_age)
     return token_data
 

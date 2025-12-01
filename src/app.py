@@ -11,6 +11,7 @@ from src.groups.routes import group_router
 from src.auth.routes import user_router
 from itsdangerous import URLSafeTimedSerializer
 from fastapi_mail import FastMail
+from src.db.main import init_engine, init_sesssionmaker
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -18,6 +19,11 @@ async def lifespan(app: FastAPI):
         torch.cuda.empty_cache()
         torch.cuda.synchronize()
     
+    engine = init_engine(Config.DB_URL)
+    app.state.db_engine = engine
+    app.state.sessionmaker = init_sesssionmaker(engine)
+
+
     dense_model = await asyncio.to_thread(processing.load_emb_model, Config.DENSE_MODEL)
     app.state.dense_model = dense_model  
     app.state.verify_email_serializer = URLSafeTimedSerializer(Config.JWT_SECRET, salt="verify-email")  
@@ -28,13 +34,16 @@ async def lifespan(app: FastAPI):
     if torch.cuda.is_available():
         torch.cuda.empty_cache()
 
+    await engine.dispose()
+
 
 app = FastAPI(
     title="VShare",
-    description="Vectorized knowledge bank with group-level access")
+    description="Vectorized knowledge bank with group-level access",
+    lifespan=lifespan)
 
 app.include_router(group_router, prefix="/groups", tags=["groups"])
-app.include_router(user_router, prefix="/user", tags=["users"])
+app.include_router(user_router, prefix="/users", tags=["users"])
 
 
 @app.exception_handler(AppError)
