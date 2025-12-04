@@ -1,8 +1,8 @@
 from pydantic import BaseModel, Field
 import uuid
 from datetime import datetime
-from src.db.models import UserRole
-from src.groups.schemas import GroupGet
+from src.core.db.models import UserRole
+from src.api.groups.schemas import GroupGet
 import uuid 
 
 class UserCreate(BaseModel):

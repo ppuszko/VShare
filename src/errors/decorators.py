@@ -1,7 +1,7 @@
 import functools
 from fastapi import HTTPException, status
 from .exceptions import AppError
-from src.config import Config
+from src.core.config import Config
 
 def handle_exceptions(func):
     @functools.wraps(func)

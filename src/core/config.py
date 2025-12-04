@@ -8,6 +8,7 @@ class Settings(BaseSettings):
     SPARSE_MODEL: str
     MULTI_MODEL: str 
     PICTURE_STORAGE: str
+    DEFAULT_PICTURE: str
     JWT_SECRET: str
     JWT_ALGORITHM: str
     APP_ENV: str
@@ -22,6 +23,7 @@ class Settings(BaseSettings):
     USE_CREDENTIALS: bool = True
     VALIDATE_CERTS: bool = True
     DOMAIN: str
+    CONFIRM_MAIL_SUBJECT: str
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -1,10 +1,12 @@
 from pydantic import BaseModel
-from src.db.models import Tier
+from src.core.db.models import Tier
+from src.core.config import Config
+
 
 class GroupCreate(BaseModel):
     name: str
     member_limit: int
-    picture_storage: str
+    picture_storage: str = Config.DEFAULT_PICTURE
 
 
 class GroupGet(BaseModel):

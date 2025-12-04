@@ -1,16 +1,14 @@
 from fastapi import Request, HTTPException, status, Depends
 from fastapi.security import HTTPBearer, APIKeyCookie
 from fastapi.security.http import HTTPAuthorizationCredentials
-from .utils import decode_token
-from src.db.main import get_session
-from src.db.models import User
+from .utils import decode_jwt
+from src.core.unit_of_work import get_uow, UnitOfWork
+from src.core.db.models import User
 from sqlmodel.ext.asyncio.session import AsyncSession
-from .service import UserService
+from src.api.users.service import UserService
 from src.errors.decorators import handle_exceptions
 from src.errors.exceptions import NotVerifiedError, ForbiddenError, TokenInvalidError
 
-
-user_service = UserService()
 
 class RefreshCookieBearer:
     def __init__(self, cookie_name: str = "refresh_token"):
@@ -19,7 +17,7 @@ class RefreshCookieBearer:
     @handle_exceptions
     async def __call__(self, request: Request):
         refresh_cookie = await self.cookie_handler.__call__(request)
-        token_data = decode_token(refresh_cookie)
+        token_data = decode_jwt(refresh_cookie)
         if token_data is None:
             raise TokenInvalidError
         
@@ -42,7 +40,7 @@ class TokenBearer(HTTPBearer):
         if creds is None:
             raise TokenInvalidError
         
-        token_data = decode_token(creds.credentials)
+        token_data = decode_jwt(creds.credentials)
         if token_data is None:
             raise TokenInvalidError
         
@@ -51,7 +49,7 @@ class TokenBearer(HTTPBearer):
         return token_data
 
     def verify_token_type(self, token_data) -> None:
-        raise NotImplementedError("Please implement this method")
+        raise NotImplementedError("Method not implemented")
     
 
 class AccessTokenBearer(TokenBearer):
@@ -59,11 +57,12 @@ class AccessTokenBearer(TokenBearer):
         if not token_data['access']:
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="This is a refresh token. Please provide an access token.")
         
-        
 
-async def get_current_user(token_details: dict = Depends(AccessTokenBearer()), session: AsyncSession = Depends(get_session)):
-    user = await user_service.get_user_by_email(token_details['user']['email'], session)
-    return user
+async def get_current_user(token_details: dict = Depends(AccessTokenBearer()), uow: UnitOfWork = Depends(get_uow)):
+    async with uow:
+        user_service = UserService(uow)
+        user = await user_service.get_user_by_email(token_details['user']['email'])
+        return user
 
 class RoleChecker:
     def __init__(self, allowed_roles: list):

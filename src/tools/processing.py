@@ -1,19 +1,20 @@
 import pdfplumber
 from pathlib import Path
+
 import os
 from fastapi import HTTPException, UploadFile
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from sentence_transformers import SentenceTransformer, util
 from pathlib import Path
-from src.config import Config
+from src.core.config import Config
 
 def extract_pdf(file_path: str | Path) -> str | None:
-    if not Path.exists(file_path):
+    if not Path.exists(Path(file_path)):
         raise HTTPException(status_code=400,
                             detail="The file doesn't exist")
     
     content = []
-
+ 
     with pdfplumber.open(file_path) as pdf:
         for page in pdf.pages:
             """tables = page.extract_tables()
@@ -27,37 +28,10 @@ def extract_pdf(file_path: str | Path) -> str | None:
     
     return "".join(content)
 
-def create_chunks(document: str) -> list[str] | None:
-    text_splitter = RecursiveCharacterTextSplitter(
-        chunk_size=400,
-        chunk_overlap=50,
-        length_function=len,
-        is_separator_regex=False,
-    )
-
-    doc_chunks = text_splitter.create_documents([document])
-    chunks = []
-    for chunk in doc_chunks:
-        chunks.append(str(chunk))
-
-    return chunks
-
 def load_emb_model(model: str) -> object:
     return SentenceTransformer(model)
 
 def create_embedding(model: SentenceTransformer, data: str | list[str]) -> list | None:
     emb = model.encode(data)
-    return emb
+    return emb.tolist()
 
-
-async def save_file(file: UploadFile) -> str:
-    extension = Path(file.filename).suffix.lower()
-
-    safe_filename = os.urandom(8).hex() + extension
-    file_path = f"{Config.SAVE_DIR}/{safe_filename}"
-
-    content = await file.read()
-    with open(file_path, "wb") as f:
-        f.write(content)
-
-    return file_path

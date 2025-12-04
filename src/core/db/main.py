@@ -15,7 +15,8 @@ def init_sesssionmaker(engine: AsyncEngine) -> async_sessionmaker:
         expire_on_commit=False
     )
 
-async def get_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
+
+'''async def get_session(request: Request) -> AsyncGenerator[AsyncSession, None]:
     async with request.app.state.sessionmaker() as session:
         yield session
-
+'''

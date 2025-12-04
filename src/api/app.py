@@ -5,13 +5,13 @@ from contextlib import asynccontextmanager
 from src.tools import processing
 import torch
 import asyncio
-from .config import Config, mail_config
+from src.core.config import Config, mail_config
 from src.errors.exceptions import AppError
-from src.groups.routes import group_router
-from src.auth.routes import user_router
+from src.api.groups.routes import group_router
+from src.api.users.routes import user_router
 from itsdangerous import URLSafeTimedSerializer
 from fastapi_mail import FastMail
-from src.db.main import init_engine, init_sesssionmaker
+from src.core.db.main import init_engine, init_sesssionmaker
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -39,7 +39,7 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(
     title="VShare",
-    description="Vectorized knowledge bank with group-level access",
+    description="Vectorized knowledge bank with group level access",
     lifespan=lifespan)
 
 app.include_router(group_router, prefix="/groups", tags=["groups"])

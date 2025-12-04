@@ -3,7 +3,7 @@ from sqlalchemy import Column, func, DateTime
 import uuid
 from datetime import datetime
 import enum
-from src.config import Config
+from src.core.config import Config
 
 
 class UserRole(str, enum.Enum):
