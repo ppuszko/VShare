@@ -38,7 +38,7 @@ class User(SQLModel, table=True):
     username: str = Field(nullable=False)
     email: str = Field(nullable=False, unique=True)
     password_hash: str = Field(exclude=True)
-    refresh_jti_hash: str = Field(exclude=True, nullable=True)
+    refresh_jwt_hash: str = Field(exclude=True, nullable=True)
     is_verified: bool = Field(default=False)
     group_uid: uuid.UUID = Field(default = None, foreign_key="groups.uid")
     role: UserRole = Field(sa_column=Column(

@@ -11,6 +11,8 @@ class Settings(BaseSettings):
     DEFAULT_PICTURE: str
     JWT_SECRET: str
     JWT_ALGORITHM: str
+    ACCESS_TOKEN_EXPIRATION_MINUTES: int
+    REFRESH_TOKEN_EXPIRATION_MINUTES: int
     APP_ENV: str
     MAIL_USERNAME: str
     MAIL_PASSWORD: str
@@ -24,6 +26,7 @@ class Settings(BaseSettings):
     VALIDATE_CERTS: bool = True
     DOMAIN: str
     CONFIRM_MAIL_SUBJECT: str
+
 
     model_config = SettingsConfigDict(
         env_file=".env",

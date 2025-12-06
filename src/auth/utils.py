@@ -19,11 +19,11 @@ def generate_hash(secret: str) -> str:
 def verify_hash(secret: str, secret_hash: str) -> bool:
     return hash_context.verify(secret, secret_hash)
 
-def create_jwt(user_data: dict, expiry: timedelta | None = None, access: bool = True) -> str:
+def create_jwt(user_data: dict, expiry: timedelta, access: bool) -> str:
     payload = {}
 
     payload['user'] = user_data
-    payload['exp'] = int((datetime.now(timezone.utc) + (expiry or timedelta(seconds=ACCESS_TOKEN_EXPIRY))).timestamp())
+    payload['exp'] = int((datetime.now(timezone.utc) + (expiry)).timestamp())
     payload['jti'] = str(uuid.uuid4())
     payload['access'] = access
 
