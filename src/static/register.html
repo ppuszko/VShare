@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Register from Invite</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex justify-center items-center h-screen">
+
+  <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-sm">
+    <h1 class="text-2xl font-bold mb-6 text-center">Complete Your Account</h1>
+
+    <form id="registerForm" class="space-y-4">
+      <input id="email" type="email" placeholder="Email"
+             class="w-full border p-2 rounded bg-gray-100" readonly />
+
+      <input id="password" type="password" placeholder="Choose password"
+             class="w-full border p-2 rounded" required/>
+
+      <button type="submit"
+        class="w-full bg-purple-600 text-white p-2 rounded hover:bg-purple-700">
+        Create Account
+      </button>
+    </form>
+
+    <p id="message" class="text-center mt-4 text-red-500"></p>
+  </div>
+
+<script>
+// Extract token
+const params = new URLSearchParams(window.location.search);
+const invite = params.get("invite");
+
+// Validate token
+async function loadInvite() {
+  const res = await fetch("http://localhost:8000/validate-invite", {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({ token: invite })
+  });
+
+  const data = await res.json();
+  if (!res.ok) {
+    message.textContent = data.detail || "Invalid or expired invite.";
+    document.getElementById("registerForm").classList.add("hidden");
+    return;
+  }
+
+  email.value = data.email;
+}
+loadInvite();
+
+// Submit final registration
+document.getElementById("registerForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const res = await fetch("http://localhost:8000/complete-invite", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      token: invite,
+      password: password.value
+    })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    message.textContent = data.detail;
+  } else {
+    message.textContent = "Account created!";
+    message.classList.remove("text-red-500");
+    message.classList.add("text-green-600");
+  }
+});
+</script>
+
+</body>
+</html>

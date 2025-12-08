@@ -12,7 +12,6 @@ class UserCreate(BaseModel):
     role: UserRole = UserRole.USER 
     group_uid: str | None = None
 
-
 class UserLogin(BaseModel):
     email: str
     password: str
@@ -20,5 +19,11 @@ class UserLogin(BaseModel):
 class UserGet(BaseModel):
     username: str
     email: str
-    group: GroupGet | None
+    role: UserRole
+    group: GroupGet 
+
+class UserInvite(BaseModel):
+    email: str
+    role: UserRole = UserRole.USER
+    group_uid: str = ""    
 

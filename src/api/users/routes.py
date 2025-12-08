@@ -1,67 +1,64 @@
 from fastapi import APIRouter, status, Depends, BackgroundTasks, Response, Security
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.requests import Request
-from sqlmodel.ext.asyncio.session import AsyncSession
-from .service import UserService
-from .schemas import UserCreate, UserLogin, UserGet
-from src.auth.dependencies import RoleChecker, RefreshCookieBearer
-from src.core.mail import send_mail_background, generate_confirmation_template
-from src.auth.utils import decode_url_safe_token, create_url_safe_token, create_jwt, decode_jwt, verify_hash
+from fastapi.templating import Jinja2Templates
 from fastapi_mail import NameEmail
-from src.core.config import Config
-from src.errors.exceptions import BadRequest, NotFoundError, TokenInvalidError
 from itsdangerous import SignatureExpired
-from src.core.unit_of_work import UnitOfWork, get_uow
-
 from datetime import timedelta
+
+from .service import UserService
+from .schemas import UserCreate, UserLogin, UserGet, UserInvite
+from src.auth.dependencies import RoleChecker, RefreshCookieBearer
+from src.auth.utils import verify_hash
+from src.errors.exceptions import BadRequest, NotFoundError, TokenInvalidError
+from src.core.db.unit_of_work import UnitOfWork, get_uow
+from src.core.url_tokenizer import URLTokenizer, TokenType
+from src.core.mail.service import MailService 
+
+templates = Jinja2Templates(directory="src/templates")
 
 user_router = APIRouter()
 
-@user_router.post("/sign-up", status_code=status.HTTP_201_CREATED)
-async def create_user(user_data: UserCreate, background_tasks: BackgroundTasks, request: Request, uow: UnitOfWork = Depends(get_uow)):
-    user_data.group_uid = "6ee418f7-d8b7-4678-883b-eaa8c262200e" # temp
-    async with uow:
-        user_service = UserService(uow)
+@user_router.get("/invite-user", status_code=status.HTTP_201_CREATED)
+async def invite_user(user_data: UserInvite, 
+                      background_tasks: BackgroundTasks, 
+                      request: Request, 
+                      curr_user: UserGet = Security(RoleChecker(["ADMIN"]))):
+    user_data.group_uid = curr_user.group.uid
+    data = user_data.model_dump()
+    token = 0 # TODO  
 
-        user = await user_service.create_user(user_data)
-        if user is not None:
-            token = create_url_safe_token({"email":user_data.email}, request.app.state.verify_email_serializer)
+    # Send mail with appropriate message and link . . . .
 
-            recipients = [NameEmail("", user_data.email)]
-            body = generate_confirmation_template(user_data.username, f"http://{Config.DOMAIN}/users/confirm-email/{token}")
-            await send_mail_background("E-mail verification", recipients, body, request, background_tasks)
-
-            return JSONResponse(
-                content = "Your account has been succesfully created! \
-                            To activate account follow instructions sent to your e-mail address",
-            )
-            
-    raise BadRequest("User account with this e-mail address already exists.")
 
 @user_router.get("/confirm-email/{token}", status_code=status.HTTP_200_OK)
 async def confirm_email(token: str, request: Request, response: Response, uow: UnitOfWork = Depends(get_uow)):   
     try:
-        token_data = decode_url_safe_token(token, request.app.state.verify_email_serializer)
-    except SignatureExpired as e:
-        raise BadRequest(detail="This link has expired.") # TODO: implement new link generation
+        tokenizer = URLTokenizer(TokenType.CONFIRMATION)
+        token_data = tokenizer.decode_url_safe_token(token)
 
-    async with uow:
-        user_service = UserService(uow)
+        async with uow:
+            user_service = UserService(uow)
 
-        user = await user_service.get_user_by_email(token_data.get("email"))
-        if user is not None:
-            await user_service.update_user(user, {"is_verified": True})
+            user = await user_service.get_user_by_email(token_data.get("email"))
+            if user is not None and not user.is_verified:
+                await user_service.update_user(user, {"is_verified": True})
+                access, refresh = await user_service.generate_auth_tokens(user, response)
 
-            token_user_dict = {"email":user.email, "role": user.role, "group_uid":str(user.group_uid)}
-            access_token = create_jwt(token_user_dict, timedelta(minutes=Config.ACCESS_TOKEN_EXPIRATION_MINUTES), True)
-            refresh_token = create_jwt(token_user_dict, timedelta(minutes=Config.REFRESH_TOKEN_EXPIRATION_MINUTES), False)
-            response.set_cookie(key="refresh_token", value=refresh_token)
-
-            return JSONResponse(content={"message": "Your account has been succesfully verified!",
-                                         "access":access_token,
-                                         "refresh": refresh_token})
-        
-    raise NotFoundError(detail="There is no account registered with this e-mail address.")
+                return templates.TemplateResponse(
+                    "verified.html",
+                    {
+                        "request":request,
+                        "message": "Your account has been succesfully verified",
+                        "access": access
+                    }
+                )
+    except SignatureExpired:
+        return templates.TemplateResponse(
+            "verify_failed.html",
+            {"request":request, "message":"Account not found"},
+            status_code=404
+        )
 
 
 @user_router.post("/sign-in")
@@ -75,20 +72,23 @@ async def sign_in(user_data: UserLogin, response: Response, uow: UnitOfWork = De
                 access_token, refresh_token = await user_service.generate_auth_tokens(user, response)
 
                 return JSONResponse(content={"message": "Your account has been succesfully verified!",
-                                            "access":access_token,
+                                            "access": access_token,
                                             "refresh": refresh_token})
         else:
             return JSONResponse(content={"message": "Incorrect e-mail or password!"})
 
 
 @user_router.get("/{user_uid}", status_code=status.HTTP_200_OK, response_model=UserGet)
-async def get_user(user_uid: str, uow: UnitOfWork = Depends(get_uow)):
+async def get_user(user_uid: str, uow: UnitOfWork = Depends(get_uow), curr_user: UserGet = Security(RoleChecker(["USER", "ADMIN"]))):
     async with uow:
         user_service = UserService(uow)
 
         user = await user_service.get_user_by_uid(user_uid)
         if user is not None:
-            return user
+            if user.group_uid == curr_user.group.uid:
+                return user
+        
+        raise NotFoundError("There is no such user in your group!")
         
 
 @user_router.post("/refresh")
@@ -100,7 +100,6 @@ async def refresh_tokens(response: Response, refresh_jwt: dict = Security(Refres
         user_service = UserService(uow)
         user = await user_service.get_user_by_email(data['user']['email'])
         if user and verify_hash(token, user.refresh_jwt_hash):
-            access, _ = await user_service.generate_auth_tokens(user, response)
-
-            return access
+            access, refresh = await user_service.generate_auth_tokens(user, response)
+            return access, refresh
         raise TokenInvalidError

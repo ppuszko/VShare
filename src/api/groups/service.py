@@ -1,5 +1,5 @@
 from src.core.db.models import Group
-from src.core.unit_of_work import UnitOfWork
+from src.core.db.unit_of_work import UnitOfWork
 from sqlmodel import select, delete
 from src.errors.exceptions import NotFoundError, ForbiddenError
 from src.errors.decorators import handle_exceptions

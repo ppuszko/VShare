@@ -47,15 +47,3 @@ def decode_jwt(token: str | None) -> dict | None:
         except jwt.PyJWTError as e:
             logging.exception(f"Failed to decode token. Message: {e}\n")
     return None
-
-
-def create_url_safe_token(data: dict, serializer: URLSafeTimedSerializer) -> str:
-    token = serializer.dumps(data)
-    return token
-
-
-def decode_url_safe_token(token: str, serializer: URLSafeTimedSerializer, max_age: int = 1200) -> Any:
-    token_data = serializer.loads(token, max_age=max_age)
-    return token_data
-
-

@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8" />
+  <title>Sign In</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-100 flex justify-center items-center h-screen">
+
+  <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-sm">
+    <h1 class="text-2xl font-bold mb-6 text-center">Sign In</h1>
+
+    <form id="loginForm" class="space-y-4">
+      <input id="email" type="email" placeholder="Email"
+             class="w-full border p-2 rounded" required/>
+
+      <input id="password" type="password" placeholder="Password"
+             class="w-full border p-2 rounded" required/>
+
+      <button type="submit"
+        class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">
+        Log In
+      </button>
+    </form>
+
+    <p id="message" class="text-center mt-4 text-red-500"></p>
+  </div>
+
+<script>
+document.getElementById("loginForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+
+  const email = email.value;
+  const password = password.value;
+
+  const res = await fetch("http://localhost:8000/sign-in", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ email, password })
+  });
+
+  const data = await res.json();
+
+  if (!res.ok) {
+    message.textContent = data.detail;
+  } else {
+    message.textContent = "Logged in!";
+    message.classList.remove("text-red-500");
+    message.classList.add("text-green-600");
+  }
+});
+</script>
+
+</body>
+</html>

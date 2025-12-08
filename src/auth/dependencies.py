@@ -3,11 +3,11 @@ from fastapi.security import HTTPBearer, APIKeyCookie
 from datetime import datetime, timezone
 
 from .utils import decode_jwt, verify_hash
-from src.core.unit_of_work import get_uow, UnitOfWork
+from src.core.db.unit_of_work import get_uow, UnitOfWork
 from src.core.db.models import User
 from src.api.users.service import UserService
 from src.errors.decorators import handle_exceptions
-from src.errors.exceptions import NotVerifiedError, ForbiddenError, TokenInvalidError, TokenExpiredError
+from src.errors.exceptions import NotVerifiedError, ForbiddenError, TokenInvalidError, TokenExpiredError, NotFoundError
 
 
 class RefreshCookieBearer:
@@ -45,24 +45,12 @@ class TokenBearer(HTTPBearer):
             raise TokenExpiredError
 
         return token_data
-
-    def is_access_token_valid(self, token_data) -> bool:
-        if not token_data['access']:
-            raise TokenInvalidError(detail="This is a refresh token. Please provide an access token.")
-        elif token_data['exp'] < datetime.now():
-            return False
-        else:
-            return True
-        
-    async def request_new_access_token(self, token: dict = Security(RefreshCookieBearer())):
-        if token is not None:
-            return token
         
 
-async def get_current_user(token_details: dict = Security(TokenBearer()), uow: UnitOfWork = Depends(get_uow)):
+async def get_current_user(token_details: dict = Security(TokenBearer()), uow: UnitOfWork = Depends(get_uow)) -> User | None:
     async with uow:
         user_service = UserService(uow)
-        user = await user_service.get_user_by_email(token_details['user']['email'])
+        user = await user_service.get_user_by_uid(token_details['user']['uid'])
         return user
 
 
@@ -71,11 +59,13 @@ class RoleChecker:
         self.allowed_roles = allowed_roles
 
     @handle_exceptions
-    def __call__(self, current_user: User = Depends(get_current_user)) -> bool | None:
+    def __call__(self, current_user: User | None = Depends(get_current_user)) -> User:
+        if not current_user:
+            raise NotFoundError
         if not current_user.is_verified:
             raise NotVerifiedError
         if current_user.role in self.allowed_roles:
-            return True        
+            return current_user
         raise ForbiddenError
 
         

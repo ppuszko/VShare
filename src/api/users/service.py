@@ -3,7 +3,7 @@ from sqlalchemy.orm import selectinload
 from fastapi import Response
 from datetime import timedelta
 
-from src.core.unit_of_work import UnitOfWork
+from src.core.db.unit_of_work import UnitOfWork
 from src.core.db.models import User
 from src.core.config import Config
 from src.auth.utils import create_jwt, decode_jwt
@@ -63,7 +63,10 @@ class UserService:
     
     @handle_exceptions
     async def generate_auth_tokens(self, user: User, response: Response) -> tuple[str, str]:
-        token_user_dict = {"email":user.email, "role": user.role, "group_uid":str(user.group_uid)}
+        token_user_dict = {"uid":str(user.uid),
+                           "email":user.email, 
+                           "role": user.role, 
+                           "group_uid":str(user.group_uid)}
 
         access_token = create_jwt(token_user_dict, timedelta(minutes=Config.ACCESS_TOKEN_EXPIRATION_MINUTES), True)
         refresh_token = create_jwt(token_user_dict, timedelta(minutes=Config.REFRESH_TOKEN_EXPIRATION_MINUTES), False)

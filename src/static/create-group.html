@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Create Group & Admin Account</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+</head>
+
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+  <form id="createGroupForm" 
+        class="bg-white p-8 rounded-xl shadow-md w-full max-w-lg space-y-4">
+
+    <h1 class="text-2xl font-bold text-center mb-6">
+      Create a New Group
+    </h1>
+
+    <!-- GROUP SECTION -->
+    <div>
+      <h2 class="font-semibold mb-2">Group Information</h2>
+
+      <input type="text" id="group_name" 
+             class="w-full border p-2 rounded mb-3" 
+             placeholder="Group Name" required />
+
+      <!-- ⭐ TIER SELECTOR -->
+      <label class="block mb-1 font-medium">Group Tier</label>
+      <select id="group_tier"
+              class="w-full border p-2 rounded bg-white"
+              required>
+        <option value="MINI">MINI</option>
+        <option value="NORMAL">NORMAL</option>
+        <option value="LARGE">LARGE</option>
+      </select>
+    </div>
+
+    <!-- USER SECTION -->
+    <div>
+      <h2 class="font-semibold mb-2">Admin Account</h2>
+
+      <input type="text" id="username" class="w-full border p-2 rounded mb-2" 
+             placeholder="Username" required />
+
+      <input type="email" id="email" class="w-full border p-2 rounded mb-2" 
+             placeholder="Email" required />
+
+      <input type="password" id="password" class="w-full border p-2 rounded" 
+             placeholder="Password" required />
+    </div>
+
+    <!-- OPTIONAL: GROUP PICTURE -->
+    <div>
+      <h2 class="font-semibold mb-2">Group Picture (optional)</h2>
+      <input type="file" id="group_picture" class="w-full" accept="image/*" />
+    </div>
+
+    <!-- SUBMIT BUTTON -->
+    <button type="submit"
+            class="w-full bg-blue-600 hover:bg-blue-700 text-white p-2 rounded">
+      Create Group
+    </button>
+
+    <p id="responseMsg" class="text-center text-red-600 font-semibold"></p>
+  </form>
+
+  <script>
+    document.getElementById("createGroupForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const groupData = {
+        name: document.getElementById("group_name").value,
+        tier: document.getElementById("group_tier").value   
+      };
+
+      const userData = {
+        username: document.getElementById("username").value,
+        email: document.getElementById("email").value,
+        password: document.getElementById("password").value
+      };
+
+      const formData = new FormData();
+      formData.append("group_data_json", JSON.stringify(groupData));
+      formData.append("user_data_json", JSON.stringify(userData));
+
+      const fileInput = document.getElementById("group_picture");
+      if (fileInput.files.length > 0) {
+        formData.append("group_picture", fileInput.files[0]);
+      }
+
+      const res = await fetch("http://localhost:8000/create-group", {
+        method: "POST",
+        body: formData
+      });
+
+      const msgBox = document.getElementById("responseMsg");
+
+      if (!res.ok) {
+        const data = await res.json();
+        msgBox.textContent = data.detail || "Something went wrong.";
+      } else {
+        const data = await res.json();
+        msgBox.textContent = data;
+      }
+    });
+  </script>
+
+</body>
+</html>

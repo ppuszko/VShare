@@ -1,22 +1,24 @@
-from fastapi import APIRouter, Depends, status
 from src.api.groups.service import GroupService
 from src.api.users.service import UserService
 from src.api.users.schemas import UserCreate
 from .schemas import GroupCreate, GroupGet
 from src.core.db.models import UserRole
-from src.core.unit_of_work import UnitOfWork, get_uow
-from src.core.mail import send_mail_background, generate_confirmation_template
+from src.core.db.unit_of_work import UnitOfWork, get_uow
+from src.core.mail.service import MailService
 from src.core.config import Config
 from src.errors.exceptions import NotFoundError 
-from src.auth.utils import create_url_safe_token, decode_url_safe_token
+from src.core.url_tokenizer import URLTokenizer, TokenType
 
+from fastapi import APIRouter, Depends, status
 from fastapi.requests import Request
 from fastapi.responses import JSONResponse
 from fastapi import BackgroundTasks, UploadFile, Form
 from pydantic import NameEmail
+
+
 group_router = APIRouter()
 
-@group_router.post('/create', status_code=status.HTTP_201_CREATED)
+@group_router.post("/create-group", status_code=status.HTTP_201_CREATED)
 async def create_group(request: Request, background_tasks: BackgroundTasks,
                        group_data_json: str = Form(...), user_data_json: str = Form(...), 
                        group_picture: UploadFile | None = None , uow: UnitOfWork = Depends(get_uow)
@@ -38,10 +40,14 @@ async def create_group(request: Request, background_tasks: BackgroundTasks,
             user = await user_service.create_user(user_data)
 
             if user is not None:
-                token = create_url_safe_token({"email":user_data.email}, request.app.state.verify_email_serializer)
-                body = generate_confirmation_template(user_data.username, f"http://{Config.DOMAIN}/users/confirm-email/{token}")
-                recipients = [NameEmail("", user_data.email)]
-                await send_mail_background(Config.CONFIRM_MAIL_SUBJECT, recipients, body, request, background_tasks)
+                mail_service = MailService(request)
+                tokenizer = URLTokenizer(TokenType.CONFIRMATION)
+
+                link = tokenizer.get_tokenized_link({"email":user.email})
+
+                await mail_service.send_email_confirmation({"username":user.username, "link":link}, 
+                                                           [user_data.email], 
+                                                           background_tasks)
 
                 return JSONResponse(content="Group succesfully created. Check your e-mail to confirm the account")
             

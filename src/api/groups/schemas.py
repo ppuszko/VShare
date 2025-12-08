@@ -5,11 +5,13 @@ from src.core.config import Config
 
 class GroupCreate(BaseModel):
     name: str
-    member_limit: int
+    tier: Tier
     picture_storage: str = Config.DEFAULT_PICTURE
+    member_limit: int = 20
 
 
 class GroupGet(BaseModel):
+    uid: str
     name: str
     member_limit: int 
     member_count: int 

@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Account Verified</title>
+    <style>
+        body { font-family: Arial; text-align: center; margin-top: 80px; }
+        .box { display: inline-block; padding: 25px; background: #f6fff6; border-radius: 10px; border: 1px solid #d4f5d4; }
+        h1 { color: #2b7a2b; }
+        p { font-size: 18px; }
+        a { text-decoration: none; color: white; background: #2b7a2b; padding: 10px 20px; border-radius: 5px; }
+    </style>
+</head>
+<body>
+    <div class="box">
+        <h1>🎉 Account Verified!</h1>
+        <p>Your email has been confirmed. You can now access your account.</p>
+        <a href="/static/sign-in.html">Continue to Sign In</a>
+    </div>
+
+    <script>
+        const accessToken = "{{ access }}";
+        localStorage.setItem("access_token", accessToken);
+    </script>
+</body>
+
+
+</html>

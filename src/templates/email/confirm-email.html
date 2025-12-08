@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<body>
+    <h1>Verify your email</h1>
+
+    <p>Hi {{ username | e }}!</p>
+
+    <p>
+        Please click this {{ link }}   <!-- This is a workaround for gmail stripping undomained links --> 
+        to verify your email.
+    </p>
+
+    <p>This link expires in 20 minutes.</p>
+</body>
+</html>
