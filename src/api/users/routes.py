@@ -34,7 +34,7 @@ async def invite_user(users_to_invite: list[UserInvite],
         for user in users_to_invite:
             if not user_service.user_exist(user.email):
                 user.group_uid = curr_user.group.uid
-                link = tokenizer.get_tokenized_link(user.model_dump())
+                my_link = tokenizer.get_tokenized_link(user.model_dump())
 
                 #TODO  add tempalte for mail invites
 
