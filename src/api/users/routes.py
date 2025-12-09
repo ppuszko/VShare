@@ -20,15 +20,24 @@ templates = Jinja2Templates(directory="src/templates")
 user_router = APIRouter()
 
 @user_router.get("/invite-user", status_code=status.HTTP_201_CREATED)
-async def invite_user(user_data: UserInvite, 
+async def invite_user(users_to_invite: list[UserInvite], 
                       background_tasks: BackgroundTasks, 
                       request: Request, 
-                      curr_user: UserGet = Security(RoleChecker(["ADMIN"]))):
-    user_data.group_uid = curr_user.group.uid
-    data = user_data.model_dump()
-    token = 0 # TODO  
+                      curr_user: UserGet = Security(RoleChecker(["ADMIN"])),
+                      uow: UnitOfWork = Depends(get_uow)):
+    
+    mail_service = MailService(request)
+    tokenizer = URLTokenizer(TokenType.INVITATION)
+    
+    async with uow:
+        user_service = UserService(uow)
+        for user in users_to_invite:
+            if not user_service.user_exist(user.email):
+                user.group_uid = curr_user.group.uid
+                link = tokenizer.get_tokenized_link(user.model_dump())
 
-    # Send mail with appropriate message and link . . . .
+                #TODO  add tempalte for mail invites
+
 
 
 @user_router.get("/confirm-email/{token}", status_code=status.HTTP_200_OK)

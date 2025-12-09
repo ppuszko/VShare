@@ -17,10 +17,10 @@ class TokenType(Enum):
 
 class URLTokenizer:
 
-    def __init__(self, token_type: TokenType, token_max_age: int = 1200):
+    def __init__(self, token_type: TokenType, token_max_age_minutes: int = 20):
         self.serializer = URLSafeTimedSerializer(Config.JWT_SECRET, salt=token_type.salt)
         self.route = token_type.route  
-        self.max_age = token_max_age
+        self.max_age = token_max_age_minutes
 
 
     def get_tokenized_link(self, data: dict):
