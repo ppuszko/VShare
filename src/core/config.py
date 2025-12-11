@@ -4,6 +4,9 @@ from pydantic import SecretStr
 
 class Settings(BaseSettings):
     DB_URL: str
+    REDIS_URL: str
+    VECTOR_DB_URL: str
+    VECTOR_COLLECTION_NAME: str
     DENSE_MODEL: str
     SPARSE_MODEL: str
     MULTI_MODEL: str 

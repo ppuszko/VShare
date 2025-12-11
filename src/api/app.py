@@ -12,6 +12,7 @@ from src.api.groups.routes import group_router
 from src.api.users.routes import user_router
 from fastapi_mail import FastMail
 from src.core.db.main import init_engine, init_sesssionmaker
+from src.core.vector.main import init_client
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -23,8 +24,10 @@ async def lifespan(app: FastAPI):
     app.state.db_engine = engine
     app.state.sessionmaker = init_sesssionmaker(engine)
 
-    #dense_model = await asyncio.to_thread(processing.load_emb_model, Config.DENSE_MODEL)
-    #app.state.dense_model = dense_model  
+    app.state.vector_client = init_client()
+    dense_model = await asyncio.to_thread(processing.load_emb_model, Config.DENSE_MODEL)
+    app.state.dense_model = dense_model  
+    
     app.state.fastmail = FastMail(mail_config) 
 
     yield

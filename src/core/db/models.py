@@ -1,6 +1,7 @@
 from sqlmodel import SQLModel, Field, Relationship, Enum as PgEnum
 from sqlalchemy import Column, func, DateTime
 import uuid
+from uuid6 import uuid7
 from datetime import datetime
 import enum
 from src.core.config import Config
@@ -19,7 +20,7 @@ class Tier(str, enum.Enum):
 
 class Group(SQLModel, table=True):
     __tablename__: str = "groups"
-    uid: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    uid: uuid.UUID = Field(default_factory=uuid7, primary_key=True)
     name: str = Field(nullable=False, unique=True)
     member_limit: int = Field(nullable=False)
     member_count: int = Field(nullable=False, default=1)
@@ -34,7 +35,7 @@ class Group(SQLModel, table=True):
 
 class User(SQLModel, table=True):
     __tablename__: str = "users"
-    uid: uuid.UUID = Field(default_factory=uuid.uuid4, primary_key=True)
+    uid: uuid.UUID = Field(default_factory=uuid7, primary_key=True)
     username: str = Field(nullable=False)
     email: str = Field(nullable=False, unique=True)
     password_hash: str = Field(exclude=True)
@@ -64,3 +65,9 @@ class User(SQLModel, table=True):
     def __repr__(self):
         return f"<User {self.username}>"
 
+class Document(SQLModel, table=True):
+    __tablename__: str = "documents"
+    uid: uuid.UUID = Field(default_factory=uuid7, primary_key=True)
+    group_uid: uuid.UUID = Field(foreign_key="groups.uid")
+    user_uid: uuid.UUID = Field(foreign_key="users.uid")
+    storage_path: str = Field(unique=True, nullable=False)
