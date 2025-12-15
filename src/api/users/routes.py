@@ -13,7 +13,7 @@ from src.auth.utils import verify_hash
 from src.errors.exceptions import BadRequest, NotFoundError, TokenInvalidError
 from src.core.db.unit_of_work import UnitOfWork, get_uow
 from src.core.utils.url_tokenizer import URLTokenizer, TokenType
-from src.core.utils.service import MailService 
+from src.core.utils.mail_service import MailService 
 
 templates = Jinja2Templates(directory="src/templates")
 

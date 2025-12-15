@@ -4,7 +4,7 @@ from src.api.users.schemas import UserCreate
 from .schemas import GroupCreate, GroupGet
 from src.core.db.models import UserRole
 from src.core.db.unit_of_work import UnitOfWork, get_uow
-from src.core.utils.service import MailService
+from src.core.utils.mail_service import MailService
 from src.core.config import Config
 from src.errors.exceptions import NotFoundError 
 from src.core.utils.url_tokenizer import URLTokenizer, TokenType

@@ -1,17 +1,42 @@
+import asyncio
+
 from qdrant_client import models, AsyncQdrantClient
-from src.core.config import Config
+from fastembed import SparseTextEmbedding, LateInteractionTextEmbedding
+from sentence_transformers import SentenceTransformer
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from fastapi import Request, Depends
 
+from src.core.config.vector import VectorConfig
+
+
 def init_client() -> AsyncQdrantClient:
-    return AsyncQdrantClient(url=Config.VECTOR_DB_URL)
+    return AsyncQdrantClient(url=VectorConfig.VECTOR_DB_URL)
 
 async def get_vector_client(request: Request) -> AsyncQdrantClient:
     return request.app.state.vector_client
 
+async def load_dense_model(model_name: str, use_cuda: bool = True) -> object:
+    def _load():
+        return SentenceTransformer(model_name, device="cuda" if use_cuda else "cpu")
+
+    return await asyncio.to_thread(_load)
+
+async def load_sparse_model(model_name: str) -> object:
+    def _load():
+        return SparseTextEmbedding(model_name=model_name)
+    
+    return await asyncio.to_thread(_load)
+
+async def load_multivector_model(model_name: str, use_cuda: bool = False) -> object:
+    def _load():
+        return LateInteractionTextEmbedding(model_name, cuda=use_cuda)
+
+    return await asyncio.to_thread(_load)
+
 
 async def init_collection(dense_size: int, multi_size: int, client: AsyncQdrantClient = Depends(get_vector_client)):
-    if not await client.collection_exists(Config.VECTOR_COLLECTION_NAME):
-        await client.create_collection(collection_name=Config.VECTOR_COLLECTION_NAME,
+    if not await client.collection_exists(VectorConfig.VECTOR_COLLECTION_NAME):
+        await client.create_collection(collection_name=VectorConfig.VECTOR_COLLECTION_NAME,
                                             vectors_config={
                                                 "dense": models.VectorParams(
                                                     size=dense_size, 
@@ -47,7 +72,7 @@ async def init_collection(dense_size: int, multi_size: int, client: AsyncQdrantC
                                         )
         
         await client.create_payload_index(
-            collection_name=Config.VECTOR_COLLECTION_NAME,
+            collection_name=VectorConfig.VECTOR_COLLECTION_NAME,
             field_name="group_uid",
             field_schema=models.KeywordIndexParams(
                 type=models.KeywordIndexType.KEYWORD,
@@ -55,13 +80,13 @@ async def init_collection(dense_size: int, multi_size: int, client: AsyncQdrantC
             )
         )
         await client.create_payload_index(
-            collection_name=Config.VECTOR_COLLECTION_NAME,
+            collection_name=VectorConfig.VECTOR_COLLECTION_NAME,
             field_name="created_at",
             field_schema=models.PayloadSchemaType.DATETIME
         )
 
         await client.create_payload_index(
-            collection_name=Config.VECTOR_COLLECTION_NAME,
+            collection_name=VectorConfig.VECTOR_COLLECTION_NAME,
             field_name="user_uid",
             field_schema=models.PayloadSchemaType.UUID
         )

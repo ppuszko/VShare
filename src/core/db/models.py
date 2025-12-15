@@ -70,4 +70,11 @@ class Document(SQLModel, table=True):
     uid: uuid.UUID = Field(default_factory=uuid7, primary_key=True)
     group_uid: uuid.UUID = Field(foreign_key="groups.uid")
     user_uid: uuid.UUID = Field(foreign_key="users.uid")
-    storage_path: str = Field(unique=True, nullable=False)
+    storage_path: str = Field(nullable=False)
+
+
+class Category(SQLModel, table=True):
+    __tablename__: str = "categories"
+    id: int | None = Field(default=None, primary_key=True)
+    name: str = Field(nullable=False)
+    group_uid: uuid.UUID = Field(nullable=False, foreign_key="groups.uid")
