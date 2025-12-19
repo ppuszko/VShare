@@ -5,10 +5,12 @@ from datetime import timedelta
 
 from src.core.db.unit_of_work import UnitOfWork
 from src.core.db.models import User
-from src.core.config import Config
-from src.auth.utils import create_jwt, decode_jwt
 from .schemas import UserCreate, UserLogin
+
+from src.core.config.auth import AuthConfig
+from src.auth.utils import create_jwt, decode_jwt
 from src.auth.utils import generate_hash, verify_hash
+
 from src.errors.decorators import handle_exceptions
 from src.errors.exceptions import ForbiddenError, NotFoundError
 
@@ -68,8 +70,8 @@ class UserService:
                            "role": user.role, 
                            "group_uid":str(user.group_uid)}
 
-        access_token = create_jwt(token_user_dict, timedelta(minutes=Config.ACCESS_TOKEN_EXPIRATION_MINUTES), True)
-        refresh_token = create_jwt(token_user_dict, timedelta(minutes=Config.REFRESH_TOKEN_EXPIRATION_MINUTES), False)
+        access_token = create_jwt(token_user_dict, timedelta(minutes=AuthConfig.ACCESS_TOKEN_EXPIRATION_MINUTES), True)
+        refresh_token = create_jwt(token_user_dict, timedelta(minutes=AuthConfig.REFRESH_TOKEN_EXPIRATION_MINUTES), False)
 
         user.refresh_jwt_hash = generate_hash(refresh_token)
         response.set_cookie(

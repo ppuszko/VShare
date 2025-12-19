@@ -4,8 +4,8 @@ import uuid
 from uuid6 import uuid7
 from datetime import datetime
 import enum
-from src.core.config import Config
-
+from src.core.config.db import DBConfig
+from src.core.config.file import FileConfig
 
 class UserRole(str, enum.Enum):
     ADMIN = "ADMIN"
@@ -24,7 +24,6 @@ class Group(SQLModel, table=True):
     name: str = Field(nullable=False, unique=True)
     member_limit: int = Field(nullable=False)
     member_count: int = Field(nullable=False, default=1)
-    picture_storage: str = Field(nullable=False, default=f"{Config.PICTURE_STORAGE}/default.jpg")
     tier: Tier = Field(sa_column=Column(
         PgEnum(Tier, name="tier"),
         nullable=False,
@@ -67,10 +66,11 @@ class User(SQLModel, table=True):
 
 class Document(SQLModel, table=True):
     __tablename__: str = "documents"
-    uid: uuid.UUID = Field(default_factory=uuid7, primary_key=True)
+    id: int | None = Field(default=None, primary_key=True)
     group_uid: uuid.UUID = Field(foreign_key="groups.uid")
     user_uid: uuid.UUID = Field(foreign_key="users.uid")
     storage_path: str = Field(nullable=False)
+    title: str = Field(nullable=False)
 
 
 class Category(SQLModel, table=True):

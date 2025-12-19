@@ -4,6 +4,7 @@ from qdrant_client import models
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from fastapi import Request
 
+
 from main import get_vector_client
 
 class VectorService:
@@ -15,7 +16,6 @@ class VectorService:
 
 
     def _split_to_chunks(self, docs: Iterable[Iterable[str | None]]) -> Iterator:
-
         splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000,
             chunk_overlap=100,

@@ -91,7 +91,13 @@ async def init_collection(dense_size: int, multi_size: int, client: AsyncQdrantC
             field_schema=models.PayloadSchemaType.UUID
         )
 
+        """await client.create_payload_index(
+            collection_name=VectorConfig.VECTOR_COLLECTION_NAME,
+            field_name="category_id",
+            field_schema=models.PayloadSchemaType.INTEGER
+        )""" # TODO: implement per-tenant categories table and caching for it, then uncomment 
+
 
         # TODO: measure the time needed to fully process and insert single 20 page document. If it is above 3 seconds, consider Celery, else use asyncio
-        # TODO: implement per-tenant categories table and caching for it 
+        
         # TODO: implement vector worker class for chunking, creating embeddings and interacting with qdrant.
