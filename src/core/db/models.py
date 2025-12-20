@@ -71,7 +71,7 @@ class Document(SQLModel, table=True):
     user_uid: uuid.UUID = Field(foreign_key="users.uid")
     storage_path: str = Field(nullable=False)
     title: str = Field(nullable=False)
-
+    category_id: int | None = Field(foreign_key="categories.id", nullable=True)
 
 class Category(SQLModel, table=True):
     __tablename__: str = "categories"

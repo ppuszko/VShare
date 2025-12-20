@@ -2,31 +2,37 @@ from collections.abc import Iterator
 from pathlib import Path
 import shutil
 
-
 import pdfplumber
-from fastapi import UploadFile
-from uuid6 import uuid7
 from odf.opendocument import load
 from odf.text import P
 from docx import Document
+from fastapi import UploadFile
+from uuid6 import uuid7
 
 from src.core.config.file import FileConfig
 from src.core.db.unit_of_work import UnitOfWork
 
 class FileService:
-    def __init__(self,  uow: UnitOfWork, save_dir: str = ""):
+    def __init__(self, save_dir: str = ""):
         self.save_dir = Path(save_dir)
-        self.allowed_extensions = {ext.strip() for ext in FileConfig.ALLOWED_EXTENSIONS.split(",") if ext.strip()}
-        self._session = uow.get_session
+        self._extractors = {
+            "pdf": self._extract_pdf,
+            "odt": self._extract_odt,
+            "docx": self._extract_docx
+        }
+        self.allowed_extensions = set(self._extractors.keys())
+
         
-    def save_files(self, files: list[UploadFile]) -> list[Path]:
+    def save_files(self, files: list[UploadFile]) -> tuple[list[str], list[str]]:
         saved_paths = []
+        failed_paths = []
 
         for file in files:
             filename = file.filename
             if filename is None:
-                raise FileNotFoundError
-            extension = filename.split(".")[-1]
+                failed_paths.append(filename)
+                continue
+            extension = Path(filename).suffix.lstrip(".")
 
             if extension in self.allowed_extensions:
                 file_name = str(uuid7()) + f".{extension}"
@@ -35,24 +41,34 @@ class FileService:
                 with dest.open("wb") as out:
                     shutil.copyfileobj(file.file, out)
                 
-                saved_paths.append(dest)
-        
-            # TODO: implement notification mechanism for all failed files.
+                saved_paths.append(str(dest))
+            else:
+                failed_paths.append(filename)
 
-        return saved_paths
+        return saved_paths, failed_paths
+
+    
+    def extract_text_from_files(self, file: str) -> Iterator[str]:
+        extension = Path(file).suffix.lstrip(".")
+        extractor = self._extractors.get(extension)
+        if extractor is not None:
+            return extractor(file)
+        return iter([])
 
 
-    def extract_pdf(self, file_path: str | Path) -> Iterator[str | None]:
+    def _extract_pdf(self, file_path: str | Path) -> Iterator[str]:
         path = Path(file_path) 
         if not path.exists():
             raise FileNotFoundError(path)
     
         with pdfplumber.open(path) as pdf:
             for page in pdf.pages:
-                yield page.extract_text() 
+                text = page.extract_text() 
+                if text:
+                    yield text  
 
 
-    def extract_docx(self, file_path: str, min_context_len: int = 1000) -> Iterator[str]:
+    def _extract_docx(self, file_path: str, min_context_len: int = FileConfig.MIN_CONTEXT_LENGTH) -> Iterator[str]:
         path = Path(file_path) 
         if not path.exists():
             raise FileNotFoundError(path)
@@ -65,7 +81,7 @@ class FileService:
 
 
 
-    def extract_odt(self, file_path: str | Path, min_context_len: int = 1000) -> Iterator[str]:
+    def _extract_odt(self, file_path: str | Path, min_context_len: int = FileConfig.MIN_CONTEXT_LENGTH) -> Iterator[str]:
         path = Path(file_path) 
         if not path.exists():
             raise FileNotFoundError(path)

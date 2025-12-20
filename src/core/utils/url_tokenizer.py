@@ -1,14 +1,17 @@
-from fastapi.requests import Request
-from itsdangerous import URLSafeTimedSerializer
-
-from src.core.config import Config
-
 from typing import Any
 from enum import Enum
 
+from fastapi.requests import Request
+from itsdangerous import URLSafeTimedSerializer
+
+from src.core.config.auth import AuthConfig
+from src.core.config.app import AppConfig
+
+
+
 class TokenType(Enum):
-    CONFIRMATION = ("confirm-email", f"{Config.DOMAIN}/confirm-email/")
-    INVITATION = ("redeem-invite", f"{Config.DOMAIN}/redeem-invite/")
+    CONFIRMATION = ("confirm-email", f"{AppConfig.DOMAIN}/confirm-email/")
+    INVITATION = ("redeem-invite", f"{AppConfig.DOMAIN}/redeem-invite/")
 
     def __init__(self, salt: str, route: str):
         self.salt = salt
@@ -16,9 +19,8 @@ class TokenType(Enum):
 
 
 class URLTokenizer:
-
     def __init__(self, token_type: TokenType, token_max_age_minutes: int = 20):
-        self.serializer = URLSafeTimedSerializer(Config.JWT_SECRET, salt=token_type.salt)
+        self.serializer = URLSafeTimedSerializer(AuthConfig.JWT_SECRET, salt=token_type.salt)
         self.route = token_type.route  
         self.max_age = token_max_age_minutes
 

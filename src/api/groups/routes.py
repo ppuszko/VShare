@@ -1,13 +1,21 @@
-from src.api.groups.service import GroupService
+
+
+
+
+
+
+
+
 from src.api.users.service import UserService
 from src.api.users.schemas import UserCreate
-from .schemas import GroupCreate, GroupGet
+from src.api.groups.service import GroupService
+from src.api.groups.schemas import GroupCreate, GroupGet
 from src.core.db.models import UserRole
 from src.core.db.unit_of_work import UnitOfWork, get_uow
+
 from src.core.utils.mail_service import MailService
-from src.core.config import Config
-from src.errors.exceptions import NotFoundError 
 from src.core.utils.url_tokenizer import URLTokenizer, TokenType
+from src.errors.exceptions import NotFoundError 
 
 from fastapi import APIRouter, Depends, status
 from fastapi.requests import Request

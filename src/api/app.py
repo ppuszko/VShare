@@ -11,6 +11,7 @@ from src.errors.exceptions import AppError
 
 from src.api.groups.routes import group_router
 from src.api.users.routes import user_router
+from src.api.vectors.routes import vector_router
 
 from src.core.config.vector import VectorConfig
 from src.core.config.db import DBConfig
@@ -60,7 +61,7 @@ app.mount("/static", StaticFiles(directory="src/static", html=True), name="stati
 
 app.include_router(group_router, tags=["groups"])
 app.include_router(user_router, tags=["users"])
-
+app.include_router(vector_router, tags=["vectors"])
 
 @app.exception_handler(AppError)
 async def app_error_handler(request: Request, exc: AppError):

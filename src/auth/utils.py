@@ -1,12 +1,13 @@
-from passlib.context import CryptContext
-from datetime import timedelta, datetime, timezone
-import jwt
-from src.core.config import Config
-import uuid
 import logging
-from itsdangerous import URLSafeTimedSerializer
-from src.errors.decorators import handle_exceptions
-from typing import Any 
+import uuid
+from datetime import timedelta, datetime, timezone
+
+import jwt
+from passlib.context import CryptContext
+
+from src.core.config.auth import AuthConfig
+
+
 
 hash_context = CryptContext(
     schemes=['bcrypt']
@@ -29,8 +30,8 @@ def create_jwt(user_data: dict, expiry: timedelta, access: bool) -> str:
 
     token = jwt.encode(
         payload=payload, 
-        key=Config.JWT_SECRET,
-        algorithm=Config.JWT_ALGORITHM
+        key=AuthConfig.JWT_SECRET,
+        algorithm=AuthConfig.JWT_ALGORITHM
     )
 
     return token
@@ -40,8 +41,8 @@ def decode_jwt(token: str | None) -> dict | None:
         try:
             token_data = jwt.decode(
                 jwt=token,
-                key=Config.JWT_SECRET,
-                algorithms=Config.JWT_ALGORITHM
+                key=AuthConfig.JWT_SECRET,
+                algorithms=AuthConfig.JWT_ALGORITHM
             )
             return token_data
         except jwt.PyJWTError as e:

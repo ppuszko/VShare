@@ -1,7 +1,7 @@
 import functools
 from fastapi import HTTPException, status
 from .exceptions import AppError
-from src.core.config import Config
+from src.core.config.app import AppConfig
 
 def handle_exceptions(func):
     @functools.wraps(func)
@@ -11,7 +11,7 @@ def handle_exceptions(func):
         except AppError:
             raise
         except Exception as e:
-            if Config.APP_ENV == "DEV":
+            if AppConfig.APP_ENV == "DEV":
                 detail = f"Exception: {e}\n"
             else:
                 detail = "Ooops, Something went wrong!"
