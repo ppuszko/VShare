@@ -4,8 +4,10 @@ from fastapi import Response
 from datetime import timedelta
 
 from src.core.db.unit_of_work import UnitOfWork
-from src.core.db.models import User
-from .schemas import UserCreate, UserLogin
+from src.core.db.models import User, Document
+from src.api.users.schemas import UserCreate, UserLogin
+from src.api.vectors.schemas import DocumentAdd, DocumentGet
+
 
 from src.core.config.auth import AuthConfig
 from src.auth.utils import create_jwt, decode_jwt
@@ -82,5 +84,12 @@ class UserService:
             samesite="strict")
         
         return (access_token, refresh_token)
+    
+
+    @handle_exceptions
+    async def add_document(self, doc: DocumentAdd) -> Document:
+        document = Document(**(doc.model_dump()))
+        self._session.add(document)
+        return document
 
 

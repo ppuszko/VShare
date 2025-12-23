@@ -4,14 +4,17 @@ from qdrant_client import models
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from fastapi import Request
 
-import numpy
+from src.api.vectors.schemas import EmbModels
+
+
 
 class VectorService:
 
-    def __init__(self, request: Request):
-        self.dense = request.app.state.dense_model
-        self.sparse = request.app.state.sparse_model
-        self.multi = request.app.state.multi_model
+    def __init__(self, models: EmbModels):
+
+        self.dense = models.dense_model
+        self.sparse = models.sparse_model
+        self.multi = models.multi_model
 
 
     def _split_to_chunks(self, docs: Iterable[Iterable[str]]) -> Iterator:

@@ -15,23 +15,15 @@ def init_client() -> AsyncQdrantClient:
 async def get_vector_client(request: Request) -> AsyncQdrantClient:
     return request.app.state.vector_client
 
-async def load_dense_model(model_name: str, use_cuda: bool = True) -> object:
-    def _load():
-        return SentenceTransformer(model_name, device="cuda" if use_cuda else "cpu")
+def load_dense_model() -> SentenceTransformer:
+    return SentenceTransformer(VectorConfig.DENSE_MODEL, device="cpu")
 
-    return await asyncio.to_thread(_load)
+def load_sparse_model() -> SparseTextEmbedding:
+    return SparseTextEmbedding(model_name=VectorConfig.SPARSE_MODEL)
 
-async def load_sparse_model(model_name: str) -> object:
-    def _load():
-        return SparseTextEmbedding(model_name=model_name)
-    
-    return await asyncio.to_thread(_load)
+def load_multivector_model() -> LateInteractionTextEmbedding:
+    return LateInteractionTextEmbedding(VectorConfig.MULTI_MODEL, cuda=False)
 
-async def load_multivector_model(model_name: str, use_cuda: bool = False) -> object:
-    def _load():
-        return LateInteractionTextEmbedding(model_name, cuda=use_cuda)
-
-    return await asyncio.to_thread(_load)
 
 
 async def init_collection(dense_size: int, multi_size: int, client: AsyncQdrantClient = Depends(get_vector_client)):

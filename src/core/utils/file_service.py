@@ -11,10 +11,12 @@ from uuid6 import uuid7
 
 from src.core.config.file import FileConfig
 from src.core.db.unit_of_work import UnitOfWork
+from src.api.vectors.schemas import DocumentAdd
 
 class FileService:
-    def __init__(self, save_dir: str = ""):
-        self.save_dir = Path(save_dir)
+    def __init__(self, group_uid: str, save_path: str = ""):
+        dir = Path(save_path)
+        self.group_save_dir = dir / group_uid
         self._extractors = {
             "pdf": self._extract_pdf,
             "odt": self._extract_odt,
@@ -23,37 +25,45 @@ class FileService:
         self.allowed_extensions = set(self._extractors.keys())
 
         
-    def save_files(self, files: list[UploadFile]) -> tuple[list[str], list[str]]:
+    def save_files(self, files: list[UploadFile], 
+                   files_metadata: list[DocumentAdd]) -> tuple[list[tuple[str, DocumentAdd]], list[tuple[str, DocumentAdd]]]:
+        if len(files) != len(files_metadata):
+            raise Exception("Amount of files doesn't match amount of metadata!")
+
         saved_paths = []
         failed_paths = []
 
-        for file in files:
+        for file, metadata in zip(files, files_metadata):
             filename = file.filename
+
             if filename is None:
-                failed_paths.append(filename)
+                failed_paths.append((filename, metadata))
                 continue
+
             extension = Path(filename).suffix.lstrip(".")
 
             if extension in self.allowed_extensions:
                 file_name = str(uuid7()) + f".{extension}"
-                dest = self.save_dir / file_name
+                dest = self.group_save_dir / file_name
 
                 with dest.open("wb") as out:
                     shutil.copyfileobj(file.file, out)
                 
-                saved_paths.append(str(dest))
+                saved_paths.append((str(dest), metadata))
+            
             else:
-                failed_paths.append(filename)
+                failed_paths.append((filename, metadata))
 
-        return saved_paths, failed_paths
+        return (saved_paths, failed_paths)
 
     
-    def extract_text_from_files(self, file: str) -> Iterator[str]:
-        extension = Path(file).suffix.lstrip(".")
-        extractor = self._extractors.get(extension)
-        if extractor is not None:
-            return extractor(file)
-        return iter([])
+    def extract_text_from_file(self, file: DocumentAdd) -> tuple[Iterator[str] | None, DocumentAdd] :
+        if file.storage_path is not None:
+            extension = Path(file.storage_path).suffix.lstrip(".")
+            extractor = self._extractors.get(extension)
+            if extractor is not None:
+                return (extractor(file), file)
+        return (None, file)
 
 
     def _extract_pdf(self, file_path: str | Path) -> Iterator[str]:

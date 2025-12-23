@@ -4,41 +4,45 @@ from fastapi.requests import Request
 
 import time
 
+from src.core.db.unit_of_work import UnitOfWork, get_uow
 from src.api.users.schemas import UserGet
 from src.api.vectors.schemas import QueryFilters, DocumentAdd
-from src.core.vector.service import VectorService
-from src.tools.file_service import FileService
+
+from src.api.vectors.service import VectorService
+from src.api.users.service import UserService
+from src.core.utils.file_service import FileService
 from src.core.config.file import FileConfig
 
 from src.auth.dependencies import RoleChecker
 
-from pympler import asizeof
+
 
 vector_router = APIRouter()
 
-@vector_router.post("/test")
-async def test(files: list[UploadFile], request: Request):
-    fs = FileService(FileConfig.PICTURE_STORAGE_PATH)
-
-    start = time.perf_counter()
-    success, fail = fs.save_files(files)
-    
-    text_to_process = []
-    for s in success:
-        text_to_process.append(fs.extract_text_from_files(s))
-
-    vector = VectorService(request)
-    size = vector.compute_vectors(text_to_process)
-
-    end = time.perf_counter()
-
-    return JSONResponse(content={"time in seconds": (end - start), "failed": fail, "success": success, "size of embeddings": size})
-
-
 
 @vector_router.post("/upload")
-async def upload_data(files: list[UploadFile], user: UserGet = Security(RoleChecker(["USER", "ADMIN"]))):
-    pass
+async def upload_data(files: list[UploadFile], 
+                      metadata: list[DocumentAdd],
+                      user: UserGet = Security(RoleChecker(["USER", "ADMIN"])), 
+                      uow: UnitOfWork = Depends(get_uow)):
+    fs = FileService(FileConfig.STORAGE_PATH)
+    saved, failed = fs.save_files(files, metadata)
+
+    payload_data = []
+    async with uow:
+
+        user_service = UserService(uow)
+
+        for s, m in saved:
+            m.group_uid = user.group.uid
+            m.user_uid = user.uid
+            m.storage_path = s
+
+            doc = await user_service.add_document(m)
+            payload_data.append(doc)
+
+
+    
 
 
 @vector_router.get("/search")

@@ -1,4 +1,6 @@
 from pydantic import BaseModel
+from uuid import UUID
+
 from src.core.db.models import Tier
 from src.core.config.file import FileConfig
 
@@ -11,7 +13,7 @@ class GroupCreate(BaseModel):
 
 
 class GroupGet(BaseModel):
-    uid: str
+    uid: UUID
     name: str
     member_limit: int 
     member_count: int 

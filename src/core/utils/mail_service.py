@@ -19,7 +19,7 @@ class EmailType(Enum):
 
 
 class MailService:
-
+    # TODO: swap request to Dependency Injection 
     def __init__(self, request: Request):
         self.fastmail = request.app.state.fastmail
 

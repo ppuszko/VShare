@@ -18,35 +18,18 @@ from src.core.config.db import DBConfig
 
 from src.core.config.mail import init_mail
 from src.core.db.main import init_engine, init_sesssionmaker
-from src.core.vector.main import (
-    init_client, 
-    load_dense_model, 
-    load_multivector_model, 
-    load_sparse_model
-)
-
+from src.api.vectors.main import init_client
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
-        torch.cuda.synchronize()
-    
     engine = init_engine(DBConfig.DB_URL)
     app.state.db_engine = engine
     app.state.sessionmaker = init_sesssionmaker(engine)
 
     app.state.vector_client = init_client()
-    app.state.dense_model = await load_dense_model(VectorConfig.DENSE_MODEL)
-    app.state.sparse_model = await load_sparse_model(VectorConfig.SPARSE_MODEL)
-    app.state.multi_model = await load_multivector_model(VectorConfig.MULTI_MODEL)
-    
     app.state.fastmail = init_mail()
 
     yield
-
-    if torch.cuda.is_available():
-        torch.cuda.empty_cache()
 
     await engine.dispose()
 

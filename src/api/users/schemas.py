@@ -1,9 +1,9 @@
 from pydantic import BaseModel, Field
-import uuid
+
 from datetime import datetime
 from src.core.db.models import UserRole
 from src.api.groups.schemas import GroupGet
-import uuid 
+from uuid import UUID 
 
 class UserCreate(BaseModel):
     username: str = Field(min_length=4, max_length=20)
@@ -17,6 +17,7 @@ class UserLogin(BaseModel):
     password: str
 
 class UserGet(BaseModel):
+    uid: UUID
     username: str
     email: str
     role: UserRole

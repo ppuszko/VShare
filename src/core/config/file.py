@@ -1,7 +1,7 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
-    PICTURE_STORAGE_PATH: str
+    STORAGE_PATH: str
     DEFAULT_PICTURE_PATH: str
     MIN_CONTEXT_LENGTH: int = 1500
     
