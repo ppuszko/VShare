@@ -72,6 +72,11 @@ class Document(SQLModel, table=True):
     storage_path: str = Field(nullable=False)
     title: str = Field(nullable=False)
     category_id: int | None = Field(foreign_key="categories.id", nullable=True)
+    created_at: datetime = Field(sa_column=Column(
+        DateTime(timezone=True),
+        nullable=False,
+        server_default=func.now()
+    ))
 
 class Category(SQLModel, table=True):
     __tablename__: str = "categories"

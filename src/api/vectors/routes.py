@@ -25,22 +25,28 @@ async def upload_data(files: list[UploadFile],
                       metadata: list[DocumentAdd],
                       user: UserGet = Security(RoleChecker(["USER", "ADMIN"])), 
                       uow: UnitOfWork = Depends(get_uow)):
-    fs = FileService(FileConfig.STORAGE_PATH)
-    saved, failed = fs.save_files(files, metadata)
+    
+    if len(files) != len(metadata):
+        raise Exception("Amount of files doesn't match amount of associated metadata!")
 
-    payload_data = []
+    fs = FileService(str(user.group.uid), FileConfig.STORAGE_PATH)
+    processed_documents = [fs.save_file(file) for file in files]
+    data_to_embedd = []
+
     async with uow:
-
         user_service = UserService(uow)
 
-        for s, m in saved:
-            m.group_uid = user.group.uid
-            m.user_uid = user.uid
-            m.storage_path = s
+        for file, meta in zip(processed_documents, metadata):
+            if file is not None:
+                meta.group_uid = user.group.uid
+                meta.user_uid = user.uid
+                meta.storage_path = file
 
-            doc = await user_service.add_document(m)
-            payload_data.append(doc)
+                payload = await user_service.add_document(meta)
 
+                data_to_embedd.append(payload)
+            else:
+                data_to_embedd.append(meta)
 
     
 

@@ -1,57 +1,74 @@
-from collections.abc import Iterable, Iterator
+from collections.abc import Iterator
+import itertools
 
-from qdrant_client import models
+from qdrant_client import models, AsyncQdrantClient, QdrantClient
+from fastembed import  TextEmbedding, SparseTextEmbedding, LateInteractionTextEmbedding
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from fastapi import Request
 
-from src.api.vectors.schemas import EmbModels
-
+from src.api.vectors.schemas import  DocumentAdd
 
 
 class VectorService:
 
-    def __init__(self, models: EmbModels):
+    def __init__(
+            self, 
+            dense_model: TextEmbedding,
+            sparse_model: SparseTextEmbedding, 
+            multi_model: LateInteractionTextEmbedding, 
+            client: AsyncQdrantClient | QdrantClient
+    ):
+        self.dense = dense_model
+        self.sparse = sparse_model
+        self.multi = multi_model
+        self.client = client
 
-        self.dense = models.dense_model
-        self.sparse = models.sparse_model
-        self.multi = models.multi_model
+
+    def upload_embeddings(self, documents: list[tuple[str | None, DocumentAdd]]):
+        if not isinstance(self.client, QdrantClient):
+            return
+
+        payload_iter = iter(())
+        dense_iter = iter(())
+        sparse_iter = iter(())
+        multi_iter = iter(())
+
+        encoded = []
+        failed = []
+
+        for doc, metadata in documents:
+            if doc is None:
+                failed.append(metadata.title)
+                continue
+            
+            chunks, payload = self._construct_chunks_and_payload(doc, metadata)
+            dense_iter =  itertools.chain(dense_iter, self.dense.embed(chunks))
+            sparse_iter = itertools.chain(sparse_iter, self.sparse.embed(chunks))
+            multi_iter = itertools.chain(multi_iter, self.multi.embed(chunks))
+            payload_iter = itertools.chain(payload_iter, payload)
+
+            encoded.append(metadata.title)
 
 
-    def _split_to_chunks(self, docs: Iterable[Iterable[str]]) -> Iterator:
+    def _construct_chunks_and_payload(self, doc: str, metadata: DocumentAdd) -> tuple[list[str], Iterator]:
         splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000,
             chunk_overlap=100,
             separators=["\n\n", "\n", ". ", " ", ""]
         )
 
-        # TODO: rethink whether to pass doc_num or some inserted doc_uid passed to func
-        for doc_num, doc in enumerate(docs):
-            for page_num, page in enumerate(doc):
-                if page:
-                    page_chunks = splitter.split_text(page)
-                    for chunk in page_chunks:
-                        yield chunk #(, page_num, doc_num)
+        chunks = splitter.split_text(doc)
+        payloads = (
+            {"group_uid":metadata.group_uid,
+             "user_uid":metadata.user_uid,
+             "created_at":metadata.created_at,
+             "category_id":metadata.category_id,
+             "chunk_text":chunk
+            } for chunk in chunks )
+        
+        return chunks, payloads
+
+        
 
 
-    def compute_vectors(self, documents: list[Iterable[str]]):
-        embeddings = []
-        chunks = self._split_to_chunks(documents)
-
-        size = 0
-
-        for chunk in chunks:
-            embed = []
-
-            dense_embed = self.dense.encode(chunk)
-            size += dense_embed.nbytes
-
-            sparse_embed = next(self.sparse.embed(chunk)).as_object()
-            for _, v in sparse_embed.items():
-                size +=  len(v) * 8
-
-
-            multi_embed = next(self.multi.embed(chunk))
-            size += multi_embed.nbytes
-
-        return (size / 1000000)
+    
                 

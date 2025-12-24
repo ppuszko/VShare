@@ -1,17 +1,32 @@
+from collections.abc import Iterator
+
+from celery.signals import worker_process_init
 
 
-from src.core.inference.celery import app, emb_models
+from src.core.inference.celery import app, dense_model, sparse_model, multi_model
 from src.api.vectors.service import VectorService
+from src.api.vectors.schemas import DocumentAdd
+from src.api.vectors.main import init_client
 
+client = None
+
+@worker_process_init.connect
+def instantiate_client():
+    global client
+    client = init_client()
 
 
 @app.task
-def get_and_insert_embeddings(files_to_embed: list[str], failed_files: list[str]):
-    # TODO: add file records to db and include their id's to text_to_process
-    for s in files_to_embed:
-        #text_to_process.append(fs.extract_text_from_files(s))
-        pass
-    vector = VectorService(emb_models)
+def compute_and_insert_embeddings(files_to_embed: list[DocumentAdd]):
+    if client is not None:
+        vector = VectorService(dense_model, sparse_model, multi_model, client)
+
+        # TODO: add file records to db and include their id's to text_to_process
+        for file in files_to_embed:
+            if file.storage_path is not None:
+
+        
+    
 
 
     # TODO: utilize requests library to send a request to internal endpoint 

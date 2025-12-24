@@ -1,32 +1,31 @@
 import asyncio
 
-from qdrant_client import models, AsyncQdrantClient
-from fastembed import SparseTextEmbedding, LateInteractionTextEmbedding
+from qdrant_client import models, AsyncQdrantClient, QdrantClient
+from fastembed import TextEmbedding, SparseTextEmbedding, LateInteractionTextEmbedding
 from sentence_transformers import SentenceTransformer
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from fastapi import Request, Depends
 
 from src.core.config.vector import VectorConfig
 
+def init_client() -> QdrantClient:
+    return QdrantClient(url=VectorConfig.VECTOR_DB_URL)
 
-def init_client() -> AsyncQdrantClient:
+def init_async_client() -> AsyncQdrantClient:
     return AsyncQdrantClient(url=VectorConfig.VECTOR_DB_URL)
 
-async def get_vector_client(request: Request) -> AsyncQdrantClient:
-    return request.app.state.vector_client
-
-def load_dense_model() -> SentenceTransformer:
-    return SentenceTransformer(VectorConfig.DENSE_MODEL, device="cpu")
+def load_dense_model() -> TextEmbedding:
+    return TextEmbedding(VectorConfig.DENSE_MODEL, device="cpu")
 
 def load_sparse_model() -> SparseTextEmbedding:
-    return SparseTextEmbedding(model_name=VectorConfig.SPARSE_MODEL)
+    return SparseTextEmbedding(VectorConfig.SPARSE_MODEL)
 
 def load_multivector_model() -> LateInteractionTextEmbedding:
-    return LateInteractionTextEmbedding(VectorConfig.MULTI_MODEL, cuda=False)
+    return LateInteractionTextEmbedding(VectorConfig.MULTI_MODEL)
 
 
 
-async def init_collection(dense_size: int, multi_size: int, client: AsyncQdrantClient = Depends(get_vector_client)):
+async def init_vector_collection(client: AsyncQdrantClient, dense_size: int = VectorConfig.DENSE_MODEL_SIZE, multi_size: int = VectorConfig.MULTI_MODEL_SIZE):
     if not await client.collection_exists(VectorConfig.VECTOR_COLLECTION_NAME):
         await client.create_collection(collection_name=VectorConfig.VECTOR_COLLECTION_NAME,
                                             vectors_config={
@@ -88,8 +87,4 @@ async def init_collection(dense_size: int, multi_size: int, client: AsyncQdrantC
             field_name="category_id",
             field_schema=models.PayloadSchemaType.INTEGER
         )""" # TODO: implement per-tenant categories table and caching for it, then uncomment 
-
-
-        # TODO: measure the time needed to fully process and insert single 20 page document. If it is above 3 seconds, consider Celery, else use asyncio
         
-        # TODO: implement vector worker class for chunking, creating embeddings and interacting with qdrant.

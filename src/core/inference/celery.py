@@ -1,12 +1,12 @@
 from celery import Celery
 
-from src.api.vectors.main import init_client
-from src.api.vectors.schemas import EmbModels
-
-
+from src.api.vectors.main import init_client, load_dense_model, load_sparse_model, load_multivector_model
 
 client = init_client()
-emb_models = EmbModels()
+
+dense_model = load_dense_model()
+sparse_model = load_sparse_model()
+multi_model = load_multivector_model()
 
 app = Celery('VShare', 
              broker="redis://localhost", 

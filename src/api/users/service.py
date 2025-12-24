@@ -6,7 +6,7 @@ from datetime import timedelta
 from src.core.db.unit_of_work import UnitOfWork
 from src.core.db.models import User, Document
 from src.api.users.schemas import UserCreate, UserLogin
-from src.api.vectors.schemas import DocumentAdd, DocumentGet
+from src.api.vectors.schemas import DocumentAdd
 
 
 from src.core.config.auth import AuthConfig
@@ -87,9 +87,9 @@ class UserService:
     
 
     @handle_exceptions
-    async def add_document(self, doc: DocumentAdd) -> Document:
+    async def add_document(self, doc: DocumentAdd) -> DocumentAdd:
         document = Document(**(doc.model_dump()))
         self._session.add(document)
-        return document
+        return DocumentAdd(**(document.model_dump()))
 
 
