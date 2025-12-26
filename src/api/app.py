@@ -18,6 +18,7 @@ from src.core.config.db import DBConfig
 
 from src.core.config.mail import init_mail
 from src.core.db.main import init_engine, init_sesssionmaker
+from src.core.utils.caching_service import init_redis
 from src.api.vectors.main import (
     init_async_client,
     load_dense_model,
@@ -25,6 +26,7 @@ from src.api.vectors.main import (
     load_sparse_model,
     init_vector_collection
 )
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -39,6 +41,7 @@ async def lifespan(app: FastAPI):
     app.state.multi_model = load_multivector_model()
     await init_vector_collection(vector_client)
 
+    app.state.redis = init_redis()
 
     app.state.fastmail = init_mail()
 

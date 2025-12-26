@@ -4,8 +4,10 @@ import itertools
 from qdrant_client import models, AsyncQdrantClient, QdrantClient
 from fastembed import  TextEmbedding, SparseTextEmbedding, LateInteractionTextEmbedding
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+from uuid6 import uuid7
 
 from src.api.vectors.schemas import  DocumentAdd
+from src.core.config.vector import VectorConfig
 
 
 class VectorService:
@@ -17,55 +19,61 @@ class VectorService:
             multi_model: LateInteractionTextEmbedding, 
             client: AsyncQdrantClient | QdrantClient
     ):
-        self.dense = dense_model
-        self.sparse = sparse_model
-        self.multi = multi_model
-        self.client = client
+        self._dense = dense_model
+        self._sparse = sparse_model
+        self._multi = multi_model
+        self._client = client
+        self._failed = []
 
 
-    def upload_embeddings(self, documents: list[tuple[str | None, DocumentAdd]]):
-        if not isinstance(self.client, QdrantClient):
+    def upload_embeddings(self, documents: Iterator[tuple[str | None, DocumentAdd]]):
+        if not isinstance(self._client, QdrantClient):
             return
+        
+        self._client.upload_points(
+            collection_name=VectorConfig.VECTOR_COLLECTION_NAME,
+            points=self._points_generator(documents))
 
-        payload_iter = iter(())
-        dense_iter = iter(())
-        sparse_iter = iter(())
-        multi_iter = iter(())
-
-        encoded = []
-        failed = []
-
+ 
+    def _points_generator(self, documents: Iterator[tuple[str | None, DocumentAdd]]):
         for doc, metadata in documents:
             if doc is None:
-                failed.append(metadata.title)
+                self._failed.append(metadata.title)
                 continue
-            
-            chunks, payload = self._construct_chunks_and_payload(doc, metadata)
-            dense_iter =  itertools.chain(dense_iter, self.dense.embed(chunks))
-            sparse_iter = itertools.chain(sparse_iter, self.sparse.embed(chunks))
-            multi_iter = itertools.chain(multi_iter, self.multi.embed(chunks))
-            payload_iter = itertools.chain(payload_iter, payload)
 
-            encoded.append(metadata.title)
+            chunks = self._construct_chunks(doc)
+            dense_iter = self._dense.query_embed(chunks)
+            sparse_iter = self._sparse.embed(chunks)
+            multi_iter = self._multi.embed(chunks)
 
+            for chunk, dense, sparse, multi in zip(chunks, dense_iter, sparse_iter, multi_iter):
+                yield models.PointStruct(
+                    id=uuid7(),
+                    payload = {"group_uid":metadata.group_uid,
+                        "user_uid":metadata.user_uid,
+                        "created_at":metadata.created_at,
+                        "category_id":metadata.category_id,
+                        "chunk_text":chunk},
+                    vector={
+                        "dense":dense,
+                        "sparse":sparse.as_object(),
+                        "multi":multi
+                    } # type: ignore
+                )
 
-    def _construct_chunks_and_payload(self, doc: str, metadata: DocumentAdd) -> tuple[list[str], Iterator]:
+    def _construct_chunks(self, doc: str) -> list[str]:
         splitter = RecursiveCharacterTextSplitter(
             chunk_size=1000,
             chunk_overlap=100,
             separators=["\n\n", "\n", ". ", " ", ""]
         )
 
-        chunks = splitter.split_text(doc)
-        payloads = (
-            {"group_uid":metadata.group_uid,
-             "user_uid":metadata.user_uid,
-             "created_at":metadata.created_at,
-             "category_id":metadata.category_id,
-             "chunk_text":chunk
-            } for chunk in chunks )
-        
-        return chunks, payloads
+        return splitter.split_text(doc)
+    
+
+    def report(self) -> list[int]:
+        return self._failed
+
 
         
 

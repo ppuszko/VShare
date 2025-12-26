@@ -29,7 +29,7 @@ class FileService:
         filename = file.filename
 
         if filename is None:
-            return        
+            return None       
         
         extension = Path(filename).suffix.lstrip(".")
         if extension in self.allowed_extensions:
@@ -41,13 +41,15 @@ class FileService:
                 return str(dest)
     
 
-    def extract_text_from_file(self, file: DocumentAdd) -> str | None :
-        if file.storage_path is not None:
-            extension = Path(file.storage_path).suffix.lstrip(".")
-            extractor = self._extractors.get(extension)
-            if extractor is not None:
-                return extractor(file)
-
+    def extract_text_from_files(self, files: list[DocumentAdd]) -> Iterator[tuple[str | None, DocumentAdd]]:
+        for file in files:
+            if file.storage_path is not None:
+                extension = Path(file.storage_path).suffix.lstrip(".")
+                extractor = self._extractors.get(extension)
+                if extractor is not None:
+                    yield extractor(file), file
+            else:
+                yield None, file
 
 
     def _extract_pdf(self, file_path: str | Path) -> str:

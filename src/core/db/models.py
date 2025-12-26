@@ -40,7 +40,7 @@ class User(SQLModel, table=True):
     password_hash: str = Field(exclude=True)
     refresh_jwt_hash: str = Field(exclude=True, nullable=True)
     is_verified: bool = Field(default=False)
-    group_uid: uuid.UUID = Field(default = None, foreign_key="groups.uid")
+    group_uid: uuid.UUID = Field(foreign_key="groups.uid")
     role: UserRole = Field(sa_column=Column(
         PgEnum(UserRole, name="user_role"),
         nullable=False,

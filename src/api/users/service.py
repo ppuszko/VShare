@@ -5,7 +5,7 @@ from datetime import timedelta
 
 from src.core.db.unit_of_work import UnitOfWork
 from src.core.db.models import User, Document
-from src.api.users.schemas import UserCreate, UserLogin
+from src.api.users.schemas import UserCreate, UserLogin, UserGet
 from src.api.vectors.schemas import DocumentAdd
 
 
@@ -87,9 +87,19 @@ class UserService:
     
 
     @handle_exceptions
-    async def add_document(self, doc: DocumentAdd) -> DocumentAdd:
-        document = Document(**(doc.model_dump()))
-        self._session.add(document)
-        return DocumentAdd(**(document.model_dump()))
+    async def add_documents(self, documents: list[str | None], documents_metadata: list[DocumentAdd], user: UserGet) -> list[DocumentAdd]:
+        data = []
+
+        for file, meta in zip(documents, documents_metadata):
+            if file is not None:
+                meta.group_uid = user.group.uid
+                meta.user_uid = user.uid
+                meta.storage_path = file
+
+                document = Document(**(meta.model_dump()))
+                self._session.add(document)
+            data.append(meta)
+            
+        return [DocumentAdd(**(doc.model_dump())) for doc in data]
 
 
