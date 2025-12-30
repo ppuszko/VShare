@@ -2,9 +2,7 @@ from fastapi import APIRouter, status, Depends, BackgroundTasks, Response, Secur
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.requests import Request
 from fastapi.templating import Jinja2Templates
-from fastapi_mail import NameEmail
 from itsdangerous import SignatureExpired
-from datetime import timedelta
 
 from .service import UserService
 from .schemas import UserCreate, UserLogin, UserGet, UserInvite
@@ -13,7 +11,7 @@ from src.auth.utils import verify_hash
 from src.errors.exceptions import BadRequest, NotFoundError, TokenInvalidError
 from src.core.db.unit_of_work import UnitOfWork, get_uow
 from src.core.utils.url_tokenizer import URLTokenizer, TokenType
-from src.core.utils.mail_service import MailService 
+from src.core.utils.mail_service import MailService, EmailType, get_mailing_service
 
 templates = Jinja2Templates(directory="src/templates")
 
@@ -22,11 +20,10 @@ user_router = APIRouter()
 @user_router.get("/invite-user", status_code=status.HTTP_201_CREATED)
 async def invite_user(users_to_invite: list[UserInvite], 
                       background_tasks: BackgroundTasks, 
-                      request: Request, 
                       curr_user: UserGet = Security(RoleChecker(["ADMIN"])),
-                      uow: UnitOfWork = Depends(get_uow)):
+                      uow: UnitOfWork = Depends(get_uow),
+                      mail_service: MailService = Depends(get_mailing_service)):
     
-    mail_service = MailService(request)
     tokenizer = URLTokenizer(TokenType.INVITATION)
     
     async with uow:
@@ -34,10 +31,13 @@ async def invite_user(users_to_invite: list[UserInvite],
         for user in users_to_invite:
             if not user_service.user_exist(user.email):
                 user.group_uid = str(curr_user.group.uid)
-                my_link = tokenizer.get_tokenized_link(user.model_dump())
 
-                #TODO  add tempalte for mail invites
-
+                link = tokenizer.get_tokenized_link(user.model_dump())
+                recipients = [user.email]
+                context = {"link": link,
+                           "group_name": curr_user.group.name}
+                
+                await mail_service.send_templated_email(context, recipients, EmailType.INVITE, background_tasks)
 
 
 @user_router.get("/confirm-email/{token}", status_code=status.HTTP_200_OK)

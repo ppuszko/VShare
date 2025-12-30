@@ -1,0 +1,57 @@
+{% if documents and emb_counts and documents|length == emb_counts|length %}
+    <h1>Hi {{ username | e }}!</h1>
+
+    <p>Here is your detailed embedding report:</p>
+
+    {% set has_failures = 0 in emb_counts %}
+
+    <section>
+        <h2>Succeeded</h2>
+        <ul>
+        {% for doc in documents %}
+            {% if emb_counts[loop.index0] > 0 %}
+                <li>
+                    <strong style="color: green;">SUCCEEDED</strong>: 
+                    {{ doc | e }} — <strong>{{ emb_counts[loop.index0] }}</strong> embeddings
+                </li>
+            {% endif %}
+        {% endfor %}
+        </ul>
+    </section>
+
+    <section>
+        <h2>Failed</h2>
+        <ul>
+        {% set failed_count = namespace(value=0) %}
+        {% for doc in documents %}
+            {% if emb_counts[loop.index0] == 0 %}
+                {% set failed_count.value = failed_count.value + 1 %}
+                <li>
+                    <strong style="color: red;">FAILED</strong>: 
+                    {{ doc | e }}
+                </li>
+            {% endif %}
+        {% endfor %}
+        
+        {% if failed_count.value == 0 %}
+            <li>No documents failed processing.</li>
+        {% endif %}
+        </ul>
+    </section>
+
+    {% if has_failures %}
+    <div style="margin-top: 20px; padding: 15px; border: 1px solid #ffcccc; background-color: #fff5f5;">
+        <p><strong>Note:</strong> Currently supported documents are in <strong>PDF, ODT, or DOCX</strong> format. 
+        Scanned PDFs are currently not supported. If you believe all documents followed these rules, 
+        please try again later.</p>
+    </div>
+    {% endif %}
+
+{% else %}
+    {# This block triggers if lists are empty or missing #}
+    <h1>Notification</h1>
+    <p style="color: #666; font-style: italic;">
+        An unknown error occurred while processing your documents. No documents were ingested. 
+        Please try again later.
+    </p>
+{% endif %}

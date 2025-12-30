@@ -2,8 +2,6 @@ import asyncio
 
 from qdrant_client import models, AsyncQdrantClient, QdrantClient
 from fastembed import TextEmbedding, SparseTextEmbedding, LateInteractionTextEmbedding
-from sentence_transformers import SentenceTransformer
-from langchain_text_splitters import RecursiveCharacterTextSplitter
 from fastapi import Request, Depends
 
 from src.core.config.vector import VectorConfig
@@ -22,6 +20,13 @@ def load_sparse_model() -> SparseTextEmbedding:
 
 def load_multivector_model() -> LateInteractionTextEmbedding:
     return LateInteractionTextEmbedding(VectorConfig.MULTI_MODEL)
+
+def get_querying_client_components(request: Request) -> tuple:
+    return (
+        request.app.state.dense_model,
+        request.app.state.sparse_model,
+        request.app.state.multi_model,
+        request.app.state.vector_client)
 
 
 
@@ -82,9 +87,9 @@ async def init_vector_collection(client: AsyncQdrantClient, dense_size: int = Ve
             field_schema=models.PayloadSchemaType.UUID
         )
 
-        """await client.create_payload_index(
+        await client.create_payload_index(
             collection_name=VectorConfig.VECTOR_COLLECTION_NAME,
             field_name="category_id",
             field_schema=models.PayloadSchemaType.INTEGER
-        )""" # TODO: implement per-tenant categories table and caching for it, then uncomment 
+        )
         

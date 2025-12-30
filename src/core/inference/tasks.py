@@ -24,22 +24,18 @@ def compute_and_insert_embeddings(files_to_embed: list[DocumentAdd], request_url
         documents = fs.extract_text_from_files(files_to_embed)
         
         vector_service = VectorService(dense_model, sparse_model, multi_model, client)
-        vector_service.upload_embeddings(documents)
+        documents, emb_counts = vector_service.upload_embeddings(documents)
 
-        failed = vector_service.report()
-        if len(failed) > 0:
-            message = f"Following files hasn't been processed succesfully: {failed}. Currently supported files formats: pdf, odt and docx.\n \
-                 Scanned pdf files are currently not supported. If you believe all sent files were following these rules, please try again later."
-        else:
-            message = "All files processed succesfully"
     else:
-        message = "Failed to process files. Please try again later"
+        documents, emb_counts = [], []
 
-    send_request.delay(request_url, message)
+    body = {
+        "documents":documents,
+        "emb_counts": emb_counts
+    }
+    send_request.delay(request_url, body)
 
 
-    # TODO: utilize requests library to send a request to internal endpoint 
-    # TODO: create such endpoint
     # TODO: incorporate nginx. Curiosity snippet: 
     """
     how nginx looks like:

@@ -3,8 +3,9 @@ from datetime import datetime
 from uuid import UUID
 
 class QueryFilters(BaseModel):
-    created_at: datetime | None = None
-    category_id: int | None = None # TODO: implement categories with redis etc.
+    group_uid: UUID
+    time_frame: tuple[datetime | None, datetime | None] = (None, None)
+    category_id: list[int] | None = None
     user_uid: UUID | None = None 
 
 
