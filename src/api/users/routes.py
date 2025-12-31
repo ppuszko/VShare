@@ -11,7 +11,7 @@ from src.auth.utils import verify_hash
 from src.errors.exceptions import BadRequest, NotFoundError, TokenInvalidError
 from src.core.db.unit_of_work import UnitOfWork, get_uow
 from src.core.utils.url_tokenizer import URLTokenizer, TokenType
-from src.core.utils.mail_service import MailService, EmailType, get_mailing_service
+from src.core.utils.mail_manager import MailManager, EmailType, get_mail_man
 
 templates = Jinja2Templates(directory="src/templates")
 
@@ -22,7 +22,7 @@ async def invite_user(users_to_invite: list[UserInvite],
                       background_tasks: BackgroundTasks, 
                       curr_user: UserGet = Security(RoleChecker(["ADMIN"])),
                       uow: UnitOfWork = Depends(get_uow),
-                      mail_service: MailService = Depends(get_mailing_service)):
+                      mail_man: MailManager = Depends(get_mail_man)):
     
     tokenizer = URLTokenizer(TokenType.INVITATION)
     
@@ -37,7 +37,7 @@ async def invite_user(users_to_invite: list[UserInvite],
                 context = {"link": link,
                            "group_name": curr_user.group.name}
                 
-                await mail_service.send_templated_email(context, recipients, EmailType.INVITE, background_tasks)
+                await mail_man.send_templated_email(context, recipients, EmailType.INVITE, background_tasks)
 
 
 @user_router.get("/confirm-email/{token}", status_code=status.HTTP_200_OK)

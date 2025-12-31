@@ -1,6 +1,7 @@
 from collections.abc import Iterator
 from pathlib import Path
 import shutil
+import os
 
 import pdfplumber
 from odf.opendocument import load
@@ -9,32 +10,33 @@ from docx import Document
 from fastapi import UploadFile
 from uuid6 import uuid7
 
-from src.core.config.file import FileConfig
-from src.core.db.unit_of_work import UnitOfWork
 from src.api.vectors.schemas import DocumentAdd
+from src.core.config.file import FileConfig
 
-class FileService:
-    def __init__(self, group_uid: str = "", save_path: str = ""):
-        dir = Path(save_path)
-        self.group_save_dir = dir / group_uid
+
+class FileManager:
+    def __init__(self, save_path: str = FileConfig.STORAGE_PATH):
+        self._save_path = Path(save_path)
         self._extractors = {
             "pdf": self._extract_pdf,
             "odt": self._extract_odt,
             "docx": self._extract_docx
         }
-        self.allowed_extensions = set(self._extractors.keys())
+        self._allowed_extensions = set(self._extractors.keys())
 
         
-    def save_file(self, file: UploadFile) -> str | None:
+    def save_file(self, file: UploadFile, group_uid: str) -> str | None:
         filename = file.filename
 
         if filename is None:
             return None       
+        if not Path(self._save_path / group_uid).is_dir():
+            os.mkdir(Path(self._save_path / group_uid))
         
         extension = Path(filename).suffix.lstrip(".")
-        if extension in self.allowed_extensions:
+        if extension in self._allowed_extensions:
             file_name = str(uuid7()) + f".{extension}"
-            dest = self.group_save_dir / file_name
+            dest = self._save_path / group_uid / file_name
 
             with dest.open("wb") as out:
                 shutil.copyfileobj(file.file, out)
@@ -96,6 +98,7 @@ class FileService:
         return " ".join(content)
 
 
-                
+def get_file_man() -> FileManager:
+    return FileManager()
 
 

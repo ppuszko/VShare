@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Depends, UploadFile, Security
 from fastapi.responses import JSONResponse
 from fastapi import BackgroundTasks
-from redis.asyncio import Redis
 
-from src.core.utils.caching_service import CachingService, get_redis
+from src.core.utils.cache_manager import CacheManager, get_cache_manager
 
 from src.core.db.unit_of_work import UnitOfWork, get_uow
 from src.api.users.schemas import UserGet
@@ -11,8 +10,8 @@ from src.api.vectors.schemas import QueryFilters, DocumentAdd
 from src.api.vectors.service import VectorService, get_querying_vector_service
 
 from src.api.users.service import UserService
-from src.core.utils.file_service import FileService
-from src.core.utils.mail_service import MailService, EmailType, get_mailing_service
+from src.core.utils.file_manager import FileManager, get_file_man
+from src.core.utils.mail_manager import MailManager, EmailType, get_mail_man
 from src.core.utils.url_tokenizer import URLTokenizer, TokenType
 from src.core.config.file import FileConfig
 
@@ -29,13 +28,14 @@ async def upload_data(files: list[UploadFile],
                       metadata: list[DocumentAdd],
                       user: UserGet = Security(RoleChecker(["USER", "ADMIN"])), 
                       uow: UnitOfWork = Depends(get_uow),
-                      redis_instance: Redis = Depends(get_redis)):
+                      cache_manager: CacheManager = Depends(get_cache_manager),
+                      file_man: FileManager = Depends(get_file_man)):
     
     if len(files) != len(metadata):
         raise Exception("Amount of files doesn't match amount of associated metadata!")
 
-    fs = FileService(str(user.group.uid), FileConfig.STORAGE_PATH)
-    documents = [fs.save_file(file) for file in files]
+    group_uid = str(user.group.uid)
+    documents = [file_man.save_file(file, group_uid) for file in files]
 
     async with uow:
         user_service = UserService(uow)
@@ -48,8 +48,7 @@ async def upload_data(files: list[UploadFile],
     ticket = tokenizer.create_url_safe_token(user_data)
     url = tokenizer.get_tokenized_link(user_data)
 
-    cache = CachingService(redis_instance)
-    await cache.insert_ticket(ticket)
+    await cache_manager.insert_ticket(ticket)
 
     compute_and_insert_embeddings.delay(files_to_embed, url)
         
@@ -57,18 +56,17 @@ async def upload_data(files: list[UploadFile],
 @vector_router.post("/embedding-report/{ticket}")
 async def embedding_report(ticket: str, body: dict, 
                            background_tasks: BackgroundTasks, 
-                           redis_instance: Redis = Depends(get_redis), 
-                           mail_service: MailService = Depends(get_mailing_service)):
+                           cache_manager: CacheManager = Depends(get_cache_manager), 
+                           mail_man: MailManager = Depends(get_mail_man)):
     
     tokenizer = URLTokenizer(TokenType.EMBEDDING_REPORT)
-    cache = CachingService(redis_instance)
-    process_ticket = await cache.should_process_ticket(ticket)
+    process_ticket = await cache_manager.should_process_ticket(ticket)
 
     if process_ticket:
         user_data = tokenizer.decode_url_safe_token(ticket)
         recipients = [user_data["user_email"]]
         body["username"] = user_data["username"]
-        await mail_service.send_templated_email(body, recipients, EmailType.EMBEDDING_REPORT, background_tasks)
+        await mail_man.send_templated_email(body, recipients, EmailType.EMBEDDING_REPORT, background_tasks)
 
 
 @vector_router.get("/search")

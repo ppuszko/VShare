@@ -13,7 +13,7 @@ from src.api.groups.schemas import GroupCreate, GroupGet
 from src.core.db.models import UserRole
 from src.core.db.unit_of_work import UnitOfWork, get_uow
 
-from src.core.utils.mail_service import MailService
+from src.core.utils.mail_manager import MailManager, get_mail_man, EmailType
 from src.core.utils.url_tokenizer import URLTokenizer, TokenType
 from src.errors.exceptions import NotFoundError 
 
@@ -29,8 +29,8 @@ group_router = APIRouter()
 @group_router.post("/create-group", status_code=status.HTTP_201_CREATED)
 async def create_group(request: Request, background_tasks: BackgroundTasks,
                        group_data_json: str = Form(...), user_data_json: str = Form(...), 
-                       group_picture: UploadFile | None = None , uow: UnitOfWork = Depends(get_uow)
-                       ):
+                       group_picture: UploadFile | None = None , uow: UnitOfWork = Depends(get_uow),
+                       mail_man: MailManager = Depends(get_mail_man)):
     
     group_data = GroupCreate.model_validate_json(group_data_json)
     user_data = UserCreate.model_validate_json(user_data_json)
@@ -48,13 +48,12 @@ async def create_group(request: Request, background_tasks: BackgroundTasks,
             user = await user_service.create_user(user_data)
 
             if user is not None:
-                mail_service = MailService(request)
                 tokenizer = URLTokenizer(TokenType.CONFIRMATION)
 
                 link = tokenizer.get_tokenized_link({"email":user.email})
 
-                await mail_service.send_email_confirmation({"username":user.username, "link":link}, 
-                                                           [user_data.email], 
+                await mail_man.send_templated_email({"username":user.username, "link":link}, 
+                                                           [user_data.email], EmailType.CONFIRMATION, 
                                                            background_tasks)
 
                 return JSONResponse(content="Group succesfully created. Check your e-mail to confirm the account")

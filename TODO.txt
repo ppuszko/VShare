@@ -1,4 +1,4 @@
  - Check all JWT token generation/usage, especially in users.routes
  - Confirm the invitation pipeline works as intended
- - Test data ingestion pipeline
- - Look for old way (non-injected) mailing service initialization
+ - Test data ingestion/retrieval pipeline
+

@@ -31,3 +31,7 @@ class TokenExpiredError(AppError):
 class BadRequest(AppError):
     def __init__(self, detail="Bad request!"):
         super().__init__(detail=detail, status_code=status.HTTP_400_BAD_REQUEST)
+
+class SessionInactiveError(AppError):
+    def __init__(self, detail="Database session is inactive. All service-related operations should be performed within `with` clause!"):
+        super().__init__(detail=detail, status_code=status.HTTP_400_BAD_REQUEST)

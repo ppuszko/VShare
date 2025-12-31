@@ -9,7 +9,7 @@ from .schemas import GroupCreate
 class GroupService:
 
     def __init__(self, uow: UnitOfWork):
-        self._session = uow.get_session
+        self._session = uow.session
 
     @handle_exceptions
     async def get_group_by_name(self, group_name: str) -> Group | None:

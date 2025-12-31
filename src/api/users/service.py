@@ -19,7 +19,7 @@ from src.errors.exceptions import ForbiddenError, NotFoundError
 
 class UserService:
     def __init__(self, uow: UnitOfWork):
-        self._session = uow.get_session  
+        self._session = uow.session  
 
     async def get_user_by_uid(self, user_uid: str) -> User | None:
         user = await self._session.exec(
@@ -67,10 +67,11 @@ class UserService:
     
     @handle_exceptions
     async def generate_auth_tokens(self, user: User, response: Response) -> tuple[str, str]:
-        token_user_dict = {"uid":str(user.uid),
-                           "email":user.email, 
-                           "role": user.role, 
-                           "group_uid":str(user.group_uid)}
+        token_user_dict = {
+            "uid":str(user.uid),
+            "email":user.email, 
+            "role": user.role, 
+            "group_uid":str(user.group_uid)}
 
         access_token = create_jwt(token_user_dict, timedelta(minutes=AuthConfig.ACCESS_TOKEN_EXPIRATION_MINUTES), True)
         refresh_token = create_jwt(token_user_dict, timedelta(minutes=AuthConfig.REFRESH_TOKEN_EXPIRATION_MINUTES), False)

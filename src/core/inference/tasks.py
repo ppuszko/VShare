@@ -4,7 +4,7 @@ from httpx import RequestError, HTTPStatusError
 from src.core.inference.celery import app, dense_model, sparse_model, multi_model, client, http_client
 from src.api.vectors.service import VectorService
 from src.api.vectors.schemas import DocumentAdd
-from src.core.utils.file_service import FileService
+from src.core.utils.file_manager import get_file_man
 
 
 
@@ -20,7 +20,7 @@ def send_request(url: str, body: dict | None = None):
 @app.task
 def compute_and_insert_embeddings(files_to_embed: list[DocumentAdd], request_url: str):
     if client is not None:
-        fs = FileService()
+        fs = get_file_man()
         documents = fs.extract_text_from_files(files_to_embed)
         
         vector_service = VectorService(dense_model, sparse_model, multi_model, client)

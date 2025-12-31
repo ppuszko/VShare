@@ -18,10 +18,7 @@ class EmailType(Enum):
         self.subject = subject
         self.template = template
 
-def get_mailing_service(request: Request):
-    return MailService(request)
-
-class MailService:
+class MailManager:
     # TODO: swap request to Dependency Injection 
     def __init__(self, request: Request):
         self._fastmail = request.app.state.fastmail
@@ -46,3 +43,7 @@ class MailService:
     def _render_template(self, name: str, context: dict):
         template = email_templates.get_template(name)
         return template.render(**context)
+    
+
+def get_mail_man(request: Request) -> MailManager:
+    return MailManager(request)

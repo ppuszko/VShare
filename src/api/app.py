@@ -18,7 +18,7 @@ from src.core.config.db import DBConfig
 
 from src.core.config.mail import init_mail
 from src.core.db.main import init_engine, init_sesssionmaker
-from src.core.utils.caching_service import init_redis
+from src.core.utils.cache_manager import init_redis
 from src.api.vectors.main import (
     init_async_client,
     load_dense_model,
