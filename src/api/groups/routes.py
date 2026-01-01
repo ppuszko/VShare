@@ -1,11 +1,3 @@
-
-
-
-
-
-
-
-
 from src.api.users.service import UserService
 from src.api.users.schemas import UserCreate
 from src.api.groups.service import GroupService
@@ -38,8 +30,6 @@ async def create_group(request: Request, background_tasks: BackgroundTasks,
     async with uow:
         group_service = GroupService(uow)
         user_service = UserService(uow)
-
-        #TODO implement picture saving
 
         group = await group_service.create_group(group_data)
         if group is not None:

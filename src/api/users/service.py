@@ -66,7 +66,7 @@ class UserService:
         raise NotFoundError("This user doesn't exist")
     
     @handle_exceptions
-    async def generate_auth_tokens(self, user: User, response: Response) -> tuple[str, str]:
+    async def generate_auth_tokens(self, user: User, response: Response) -> str:
         token_user_dict = {
             "uid":str(user.uid),
             "email":user.email, 
@@ -84,7 +84,7 @@ class UserService:
             secure=True, 
             samesite="strict")
         
-        return (access_token, refresh_token)
+        return access_token
     
 
     @handle_exceptions

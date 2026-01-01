@@ -22,7 +22,7 @@ class NotVerifiedError(AppError):
 
 class TokenInvalidError(AppError):
     def __init__(self, detail="This token is invalid. Log in to obtain new token"):
-        super().__init__(detail=detail, status_code=status.HTTP_400_UNAUTHORIZED)
+        super().__init__(detail=detail, status_code=status.HTTP_403_FORBIDDEN)
 
 class TokenExpiredError(AppError):
     def __init__(self, detail="This token is expired!"):

@@ -12,41 +12,58 @@
 
     <form id="loginForm" class="space-y-4">
       <input id="email" type="email" placeholder="Email"
-             class="w-full border p-2 rounded" required/>
+             class="w-full border p-2 rounded focus:outline-blue-500" required/>
 
       <input id="password" type="password" placeholder="Password"
-             class="w-full border p-2 rounded" required/>
+             class="w-full border p-2 rounded focus:outline-blue-500" required/>
 
       <button type="submit"
-        class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">
+        class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700 transition">
         Log In
       </button>
     </form>
 
-    <p id="message" class="text-center mt-4 text-red-500"></p>
+    <p id="message" class="text-center mt-4 text-sm font-medium"></p>
   </div>
 
 <script>
 document.getElementById("loginForm").addEventListener("submit", async (e) => {
   e.preventDefault();
 
-  const email = email.value;
-  const password = password.value;
+  const message = document.getElementById("message");
+  const emailVal = document.getElementById("email").value;
+  const passwordVal = document.getElementById("password").value;
 
-  const res = await fetch("http://localhost:8000/sign-in", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ email, password })
-  });
+  // Clear previous messages
+  message.textContent = "";
 
-  const data = await res.json();
+  try {
+    const res = await fetch("http://localhost:8000/sign-in", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email: emailVal, password: passwordVal })
+    });
 
-  if (!res.ok) {
-    message.textContent = data.detail;
-  } else {
-    message.textContent = "Logged in!";
-    message.classList.remove("text-red-500");
-    message.classList.add("text-green-600");
+    // Since the endpoint returns a raw string or a JSON string
+    const data = await res.json();
+
+    if (!res.ok) {
+      // Display the specific error from FastAPI (like "Invalid email or password")
+      message.textContent = "Invalid email or password";
+      message.className = "text-center mt-4 text-sm font-medium text-red-500";
+    } else {
+      // SAVE ACCESS TOKEN (Now 'data' is just the token string)
+      localStorage.setItem("accessToken", data);
+
+      message.textContent = "Logged in successfully!";
+      message.className = "text-center mt-4 text-sm font-medium text-green-600";
+      
+
+      window.location.href = "/static/search.html";
+    }
+  } catch (err) {
+    message.textContent = "Cannot connect to server.";
+    message.className = "text-center mt-4 text-sm font-medium text-red-500";
   }
 });
 </script>

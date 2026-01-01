@@ -80,9 +80,7 @@ async def sign_in(user_data: UserLogin, response: Response, uow: UnitOfWork = De
             if password_match:
                 access_token, refresh_token = await user_service.generate_auth_tokens(user, response)
 
-                return JSONResponse(content={"message": "Your account has been succesfully verified!",
-                                            "access": access_token,
-                                            "refresh": refresh_token})
+                return access_token
         else:
             return JSONResponse(content={"message": "Incorrect e-mail or password!"})
 
