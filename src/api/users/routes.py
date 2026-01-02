@@ -5,20 +5,21 @@ from fastapi.templating import Jinja2Templates
 from itsdangerous import SignatureExpired
 
 from .service import UserService
-from .schemas import UserCreate, UserLogin, UserGet, UserInvite
+from .schemas import UserLogin, UserGet, UserInvite, UserCreate, UserMissingCredentials
 from src.auth.dependencies import RoleChecker, RefreshCookieBearer
 from src.auth.utils import verify_hash
 from src.errors.exceptions import BadRequest, NotFoundError, TokenInvalidError
 from src.core.db.unit_of_work import UnitOfWork, get_uow
 from src.core.utils.url_tokenizer import URLTokenizer, TokenType
 from src.core.utils.mail_manager import MailManager, EmailType, get_mail_man
+from src.errors.exceptions import TokenInvalidError
 
 templates = Jinja2Templates(directory="src/templates")
 
 user_router = APIRouter()
 
 @user_router.get("/invite-user", status_code=status.HTTP_201_CREATED)
-async def invite_user(users_to_invite: list[UserInvite], 
+async def invite_users(users_to_invite: list[UserInvite], 
                       background_tasks: BackgroundTasks, 
                       curr_user: UserGet = Security(RoleChecker(["ADMIN"])),
                       uow: UnitOfWork = Depends(get_uow),
@@ -40,6 +41,34 @@ async def invite_user(users_to_invite: list[UserInvite],
                 await mail_man.send_templated_email(context, recipients, EmailType.INVITE, background_tasks)
 
 
+@user_router.get("/validate-invite/{token}", status_code=status.HTTP_200_OK)
+async def validate_invite(token: str):
+    try:
+        tokenizer = URLTokenizer(TokenType.INVITATION)
+        token_data = tokenizer.decode_url_safe_token(token)
+        return {"email": token_data["email"],
+                "group_name": token_data["group_name"],
+                "role": token_data["role"]}
+    except SignatureExpired:
+        raise TokenInvalidError
+
+
+@user_router.get("/redeem-invite/{token}", status_code=status.HTTP_200_OK)
+async def redeem_invite(token: str, missingCreds: UserMissingCredentials, uow: UnitOfWork = Depends(get_uow)):
+    try:
+        tokenizer = URLTokenizer(TokenType.INVITATION)
+        token_data = tokenizer.decode_url_safe_token(token)    
+
+        user_data = UserCreate(**(missingCreds.model_dump()), **(token_data))
+
+        async with uow:
+            user_service = UserService(uow)
+            user = user_service.create_user(user_data)
+
+    except Exception:
+        raise TokenInvalidError
+
+
 @user_router.get("/confirm-email/{token}", status_code=status.HTTP_200_OK)
 async def confirm_email(token: str, request: Request, response: Response, uow: UnitOfWork = Depends(get_uow)):   
     try:
@@ -52,20 +81,27 @@ async def confirm_email(token: str, request: Request, response: Response, uow: U
             user = await user_service.get_user_by_email(token_data.get("email"))
             if user is not None and not user.is_verified:
                 await user_service.update_user(user, {"is_verified": True})
-                access, refresh = await user_service.generate_auth_tokens(user, response)
+                access = await user_service.generate_auth_tokens(user, response)
 
                 return templates.TemplateResponse(
                     "verified.html",
                     {
                         "request":request,
-                        "message": "Your account has been succesfully verified",
-                        "access": access
+                        "message": "Your account has been succesfully verified"
                     }
                 )
     except SignatureExpired:
         return templates.TemplateResponse(
             "verify_failed.html",
-            {"request":request, "message":"Account not found"},
+            {"request":request, 
+             "message":"Activation link expired."}, # TODO: implement new link request
+            status_code=404
+        )
+    except Exception:
+        return templates.TemplateResponse(
+            "verify_failed.html",
+            {"request":request, 
+             "message":"Confirmation link is invalid."},
             status_code=404
         )
 

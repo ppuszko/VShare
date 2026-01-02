@@ -1,26 +1,24 @@
-from celery import Celery
-from src.api.vectors.main import init_client
-from celery.signals import worker_process_init
-import httpx
+from typing import TYPE_CHECKING
 
-from src.api.vectors.main import init_client, load_dense_model, load_sparse_model, load_multivector_model
+from celery import Celery
+
 
 
 app = Celery('VShare', 
              broker="redis://localhost", 
              include=["src.core.inference.tasks"],)
 
-dense_model = load_dense_model()
-sparse_model = load_sparse_model()
-multi_model = load_multivector_model()
 
-client = None
-http_client = None
+if TYPE_CHECKING:
+    from qdrant_client import QdrantClient
+    from qdrant_client.models import SparseTextEmbedding, TextEmbedding, LateInteractionTextEmbedding
+    from httpx import Client
 
-@worker_process_init.connect
-def init_worker():
-    global client
-    client = init_client()
-    global http_client
-    http_client = httpx.Client(timeout=10.0)
+dense_model: "TextEmbedding" = None # type: ignore
+sparse_model: "SparseTextEmbedding" = None # type: ignore
+multi_model: "LateInteractionTextEmbedding" = None # type: ignore
+
+client: "QdrantClient" = None # type: ignore
+http_client: "Client" = None # type: ignore
+
 

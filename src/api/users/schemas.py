@@ -16,6 +16,7 @@ class UserLogin(BaseModel):
     email: str
     password: str
 
+
 class UserGet(BaseModel):
     uid: UUID
     username: str
@@ -28,3 +29,7 @@ class UserInvite(BaseModel):
     role: UserRole = UserRole.USER
     group_uid: str = ""    
 
+
+class UserMissingCredentials(BaseModel):
+    username: str = Field(min_length=4, max_length=20)
+    password: str = Field(min_length=8, max_length=40)

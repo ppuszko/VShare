@@ -10,9 +10,9 @@ from src.core.config.app import AppConfig
 
 
 class TokenType(Enum):
-    CONFIRMATION = ("confirm-email", f"{AppConfig.DOMAIN}/confirm-email/")
-    INVITATION = ("redeem-invite", f"{AppConfig.DOMAIN}/redeem-invite/")
-    EMBEDDING_REPORT = ("embedding-report", f"{AppConfig.DOMAIN}/embedding-report/")
+    CONFIRMATION = ("confirm-email", f"http://{AppConfig.DOMAIN}/confirm-email/")
+    INVITATION = ("redeem-invite", f"http://{AppConfig.DOMAIN}/redeem-invite/")
+    EMBEDDING_REPORT = ("embedding-report", f"http://{AppConfig.DOMAIN}/embedding-report/")
 
     def __init__(self, salt: str, route: str):
         self.salt = salt

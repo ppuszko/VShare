@@ -1,78 +1,148 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Register from Invite</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Create Your Account</title>
   <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-100 flex justify-center items-center h-screen">
+<body class="bg-gray-100 flex justify-center items-center h-screen p-4">
 
-  <div class="bg-white p-8 rounded-xl shadow-lg w-full max-w-sm">
-    <h1 class="text-2xl font-bold mb-6 text-center">Complete Your Account</h1>
+  <div id="errorState" class="hidden bg-white p-8 rounded-xl shadow-lg w-full max-w-sm text-center">
+    <div class="text-red-500 text-5xl mb-4">⚠️</div>
+    <h1 class="text-xl font-bold text-gray-800 mb-2">Invalid Invitation</h1>
+    <p class="text-gray-600 mb-6">This invitation link has expired or is no longer valid.</p>
+    <a href="/static/login.html" class="text-blue-600 hover:underline">Go to Login</a>
+  </div>
+
+  <div id="formState" class="bg-white p-8 rounded-xl shadow-lg w-full max-w-md">
+    <h1 class="text-2xl font-bold mb-2 text-center">Complete Registration</h1>
+    <p id="inviteSummary" class="text-sm text-gray-500 text-center mb-6">Loading invitation details...</p>
 
     <form id="registerForm" class="space-y-4">
-      <input id="email" type="email" placeholder="Email"
-             class="w-full border p-2 rounded bg-gray-100" readonly />
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 uppercase">Email Address</label>
+        <input id="email" type="email" class="w-full border p-2 rounded bg-gray-50 text-gray-500 cursor-not-allowed" readonly/>
+      </div>
 
-      <input id="password" type="password" placeholder="Choose password"
-             class="w-full border p-2 rounded" required/>
+      <div>
+        <label class="block text-xs font-semibold text-gray-500 uppercase">Username</label>
+        <input id="username" type="text" placeholder="Choose a username" 
+               class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" 
+               required minlength="4" maxlength="20"/>
+      </div>
+
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase">Password</label>
+          <input id="password" type="password" placeholder="••••••••" 
+                 class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" 
+                 required minlength="8" maxlength="40"/>
+        </div>
+        <div>
+          <label class="block text-xs font-semibold text-gray-500 uppercase">Repeat Password</label>
+          <input id="confirmPassword" type="password" placeholder="••••••••" 
+                 class="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 outline-none" 
+                 required minlength="8" maxlength="40"/>
+        </div>
+      </div>
 
       <button type="submit"
-        class="w-full bg-purple-600 text-white p-2 rounded hover:bg-purple-700">
+        class="w-full bg-blue-600 text-white p-2 mt-2 rounded font-bold hover:bg-blue-700 transition duration-200">
         Create Account
       </button>
     </form>
 
-    <p id="message" class="text-center mt-4 text-red-500"></p>
+    <p id="message" class="text-center mt-4 text-sm font-medium"></p>
   </div>
 
 <script>
-// Extract token
-const params = new URLSearchParams(window.location.search);
-const invite = params.get("invite");
+  // Elements
+  const formState = document.getElementById("formState");
+  const errorState = document.getElementById("errorState");
+  const registerForm = document.getElementById("registerForm");
+  const message = document.getElementById("message");
+  
+  // Extract token from URL ?token=...
+  const urlParams = new URLSearchParams(window.location.search);
+  const token = urlParams.get('token');
 
-// Validate token
-async function loadInvite() {
-  const res = await fetch("http://localhost:8000/validate-invite", {
-    method: "POST",
-    headers: {"Content-Type": "application/json"},
-    body: JSON.stringify({ token: invite })
-  });
+  // 1. Initial UX Validation: Check if token is valid to show info
+  window.onload = async () => {
+    if (!token) {
+      toggleStates(false);
+      return;
+    }
 
-  const data = await res.json();
-  if (!res.ok) {
-    message.textContent = data.detail || "Invalid or expired invite.";
-    document.getElementById("registerForm").classList.add("hidden");
-    return;
+    try {
+      // Assuming your UX endpoint is /user/invite-info/{token}
+      const res = await fetch(`/validate_invite/${token}`);
+      if (res.ok) {
+        const data = await res.json();
+        document.getElementById("email").value = data.email;
+        document.getElementById("inviteSummary").textContent = `You've been invited to join the group as a ${data.role}.`;
+      } else {
+        toggleStates(false);
+      }
+    } catch (err) {
+      toggleStates(false);
+    }
+  };
+
+  function toggleStates(isValid) {
+    if (isValid) {
+      formState.classList.remove("hidden");
+      errorState.classList.add("hidden");
+    } else {
+      formState.classList.add("hidden");
+      errorState.classList.remove("hidden");
+    }
   }
 
-  email.value = data.email;
-}
-loadInvite();
+  // 2. Form Submission with Browser-side validation
+  registerForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    
+    const password = document.getElementById("password").value;
+    const confirmPassword = document.getElementById("confirmPassword").value;
+    const username = document.getElementById("username").value;
 
-// Submit final registration
-document.getElementById("registerForm").addEventListener("submit", async (e) => {
-  e.preventDefault();
+    // Password matching check
+    if (password !== confirmPassword) {
+      message.textContent = "Passwords do not match.";
+      message.className = "text-center mt-4 text-sm font-medium text-red-500";
+      return;
+    }
 
-  const res = await fetch("http://localhost:8000/complete-invite", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      token: invite,
-      password: password.value
-    })
+    try {
+      // Final registration endpoint using Path Param
+      const res = await fetch(`/redeem-invite/${token}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: username,
+          password: password
+        })
+      });
+
+      if (res.ok) {
+        message.textContent = "Registration successful! Redirecting to login...";
+        message.className = "text-center mt-4 text-sm font-medium text-green-600";
+        
+        // Success redirect
+        setTimeout(() => {
+          window.location.href = "/static/login.html";
+        }, 1500);
+      } else {
+        const errData = await res.json();
+        message.textContent = errData.detail || "Registration failed.";
+        message.className = "text-center mt-4 text-sm font-medium text-red-500";
+      }
+    } catch (err) {
+      message.textContent = "Server error. Please try again later.";
+      message.className = "text-center mt-4 text-sm font-medium text-red-500";
+    }
   });
-
-  const data = await res.json();
-
-  if (!res.ok) {
-    message.textContent = data.detail;
-  } else {
-    message.textContent = "Account created!";
-    message.classList.remove("text-red-500");
-    message.classList.add("text-green-600");
-  }
-});
 </script>
 
 </body>
