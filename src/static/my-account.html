@@ -1,65 +1,158 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8"><title>My Account</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Account</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-gray-50 p-10">
-    <div class="max-w-6xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8">
+    <div class="max-w-6xl mx-auto">
         
-        <div class="md:col-span-2 bg-white p-8 rounded-xl shadow">
-            <h2 class="text-2xl font-bold mb-6">Account Details</h2>
-            <div class="grid grid-cols-2 gap-4">
-                <div><p class="text-gray-500">Username</p><p id="disp-username" class="font-bold">-</p></div>
-                <div><p class="text-gray-500">Role</p><p id="disp-role" class="font-bold">-</p></div>
-                <div><p class="text-gray-500">Email</p><p id="disp-email" class="font-bold">-</p></div>
-                <div><p class="text-gray-500">Documents</p><p id="disp-docs" class="font-bold text-blue-600">-</p></div>
-            </div>
+        <div class="flex justify-between items-center mb-10">
+            <h1 class="text-3xl font-bold text-gray-800">Account Dashboard</h1>
+            <button id="logoutBtn" class="bg-white border border-gray-300 hover:bg-red-50 hover:text-red-600 text-gray-600 px-4 py-2 rounded-lg transition font-medium">
+                Log Out
+            </button>
         </div>
 
-        <div id="adminPanel" class="hidden bg-white p-8 rounded-xl shadow border-t-4 border-blue-600">
-            <h2 class="text-xl font-bold mb-4">Invite Members</h2>
-            <p class="text-xs text-gray-400 mb-4">Separate multiple emails with commas</p>
-            <textarea id="inviteEmails" placeholder="user@example.com, boss@company.com" 
-                      class="w-full border p-2 rounded text-sm h-24 mb-4"></textarea>
-            <button id="sendInvites" class="w-full bg-blue-600 text-white p-2 rounded hover:bg-blue-700">Send Invitations</button>
-            <p id="inviteMsg" class="mt-2 text-xs text-center"></p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+            
+            <div class="md:col-span-2 bg-white p-8 rounded-xl shadow-sm border border-gray-100 h-fit">
+                <h2 class="text-2xl font-bold mb-6 text-gray-800">Account Details</h2>
+                
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                    <div>
+                        <p class="text-sm text-gray-400 uppercase font-bold tracking-wider">Username</p>
+                        <p id="disp-username" class="text-xl font-semibold text-gray-900">-</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-400 uppercase font-bold tracking-wider">Role</p>
+                        <span id="disp-role" class="inline-block mt-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-black uppercase">-</span>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-400 uppercase font-bold tracking-wider">Email</p>
+                        <p id="disp-email" class="text-xl font-semibold text-gray-900">-</p>
+                    </div>
+                    <div>
+                        <p class="text-sm text-gray-400 uppercase font-bold tracking-wider">Documents Inserted</p>
+                        <p id="disp-docs" class="text-3xl font-bold text-blue-600">-</p>
+                    </div>
+                </div>
+            </div>
+
+            <div id="adminPanel" class="hidden bg-white p-8 rounded-xl shadow-lg border-t-4 border-blue-600">
+                <h2 class="text-xl font-bold mb-2 text-gray-800">Admin: Invite Users</h2>
+                <p class="text-xs text-gray-400 mb-6">Add multiple users and assign their roles before sending.</p>
+                
+                <div id="inviteList" class="space-y-3 mb-4">
+                    </div>
+
+                <button id="addInviteRow" class="w-full mb-6 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-400 hover:text-blue-500 transition flex justify-center items-center font-medium">
+                    <span class="mr-1 text-lg">+</span> Add Another
+                </button>
+                
+                <button id="sendInvites" class="w-full bg-blue-600 text-white p-3 rounded-lg font-bold hover:bg-blue-700 transition">
+                    Send All Invitations
+                </button>
+                
+                <p id="inviteMsg" class="mt-2 text-xs text-center font-semibold min-h-[1rem]"></p>
+            </div>
+
         </div>
     </div>
 
-    <script>
-        // Reuse your apiRequest function from previous prompts here!
-        async function loadProfile() {
-            // Assume /me returns { username, email, role, doc_count }
-            const res = await apiRequest("/user/me"); 
-            const user = await res.json();
+    <script type="module">
+        import { apiRequest } from './api.js';
 
+        const inviteListContainer = document.getElementById('inviteList');
+
+        // Helper to create a new row in the UI
+        function createInviteRow() {
+            const row = document.createElement('div');
+            row.className = "flex gap-2 items-center invite-row animate-in fade-in duration-300";
+            row.innerHTML = `
+                <input type="email" placeholder="Email" class="invite-email flex-1 border border-gray-200 p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                <select class="invite-role border border-gray-200 p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                    <option value="USER">USER</option>
+                    <option value="ADMIN">ADMIN</option>
+                </select>
+                <button class="remove-row text-gray-300 hover:text-red-500 px-2 transition">×</button>
+            `;
+            
+            // Remove row logic
+            row.querySelector('.remove-row').addEventListener('click', () => {
+                if (document.querySelectorAll('.invite-row').length > 1) {
+                    row.remove();
+                }
+            });
+            
+            inviteListContainer.appendChild(row);
+        }
+
+        // 1. Function to Load Data
+        async function loadProfile() {
+            const res = await apiRequest("/me"); 
+            if (!res || !res.ok) return;
+
+            const user = await res.json();
             document.getElementById('disp-username').textContent = user.username;
             document.getElementById('disp-email').textContent = user.email;
             document.getElementById('disp-role').textContent = user.role;
-            document.getElementById('disp-docs').textContent = user.doc_count;
+            document.getElementById('disp-docs').textContent = user.doc_count ?? 0;
 
-            // Toggle Admin Panel
             if (user.role === "ADMIN") {
                 document.getElementById('adminPanel').classList.remove('hidden');
+                // Initialize with one row
+                if (inviteListContainer.children.length === 0) createInviteRow();
             }
         }
 
+        // Add row on button click
+        document.getElementById('addInviteRow').addEventListener('click', createInviteRow);
+
+        // 2. Handle Invitation Sending
         document.getElementById('sendInvites').addEventListener('click', async () => {
-            const emails = document.getElementById('inviteEmails').value.split(',').map(e => ({ email: e.trim() }));
-            const res = await apiRequest("/user/invite-user", {
+            const inviteMsg = document.getElementById('inviteMsg');
+            const rows = document.querySelectorAll('.invite-row');
+            
+            // Map the rows to the UserInvite model structure
+            const invites = Array.from(rows).map(row => ({
+                email: row.querySelector('.invite-email').value.trim(),
+                role: row.querySelector('.invite-role').value,
+                group_uid: "" // Endpoint fills this, but we send empty string per model
+            })).filter(invite => invite.email !== "");
+
+            if (invites.length === 0) {
+                inviteMsg.textContent = "Please enter at least one valid email.";
+                inviteMsg.className = "mt-2 text-xs text-center text-red-500";
+                return;
+            }
+
+            inviteMsg.textContent = "Sending...";
+            inviteMsg.className = "mt-2 text-xs text-center text-blue-500";
+
+            const res = await apiRequest("/invite-user", {
                 method: "POST",
-                body: JSON.stringify(emails)
+                body: JSON.stringify(invites)
             });
 
-            const msg = document.getElementById('inviteMsg');
-            if (res.ok) {
-                msg.textContent = "Invites sent successfully!";
-                msg.className = "mt-2 text-xs text-center text-green-600";
+            if (res && res.ok) {
+                inviteMsg.textContent = `Success! ${invites.length} invitation(s) sent.`;
+                inviteMsg.className = "mt-2 text-xs text-center text-green-600";
+                // Clear and reset rows
+                inviteListContainer.innerHTML = '';
+                createInviteRow();
             } else {
-                msg.textContent = "Error sending invites.";
-                msg.className = "mt-2 text-xs text-center text-red-500";
+                inviteMsg.textContent = "Error sending invites.";
+                inviteMsg.className = "mt-2 text-xs text-center text-red-500";
             }
+        });
+
+        // 3. Handle Logout
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            localStorage.removeItem("accessToken");
+            window.location.href = "/static/sign-in.html";
         });
 
         window.onload = loadProfile;

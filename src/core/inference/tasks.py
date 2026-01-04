@@ -32,7 +32,7 @@ def send_request(url: str, body: dict | None = None):
 
 @app.task
 def compute_and_insert_embeddings(files_to_embed: list[DocumentAdd], request_url: str):
-
+    print("Test: START WORKER TASK")
     fs = get_file_man()
     documents = fs.extract_text_from_files(files_to_embed)
     
@@ -47,4 +47,4 @@ def compute_and_insert_embeddings(files_to_embed: list[DocumentAdd], request_url
         "emb_counts": emb_counts
     }
     send_request.delay(request_url, body)
-
+    print("Test: FINISH WORKER TASK")

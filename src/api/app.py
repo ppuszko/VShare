@@ -1,10 +1,10 @@
 # uvicorn --reload src.app:app
 from contextlib import asynccontextmanager
 
-import torch
-from fastapi import FastAPI, Request, status, HTTPException
+from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 
 
 from src.errors.exceptions import AppError
@@ -13,8 +13,8 @@ from src.api.groups.routes import group_router
 from src.api.users.routes import user_router
 from src.api.vectors.routes import vector_router
 
-from src.core.config.vector import VectorConfig
 from src.core.config.db import DBConfig
+from src.core.config.app import AppConfig
 
 from src.core.config.mail import init_mail
 from src.core.db.main import init_engine, init_sesssionmaker
@@ -27,6 +27,8 @@ from src.api.vectors.main import (
     init_vector_collection
 )
 
+
+import traceback
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -56,6 +58,14 @@ app = FastAPI(
     lifespan=lifespan)
 
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.mount("/static", StaticFiles(directory="src/static", html=True), name="static")
 
 app.include_router(group_router, tags=["groups"])
@@ -64,7 +74,18 @@ app.include_router(vector_router, tags=["vectors"])
 
 @app.exception_handler(AppError)
 async def app_error_handler(request: Request, exc: AppError):
+    traceback.print_exc()
     return JSONResponse(
         status_code=exc.status_code,
         content={"detail":exc.detail} 
     )
+
+@app.exception_handler(Exception)
+async def generic_exception_handler(request: Request, exc: Exception):
+    traceback.print_exc()
+    if AppConfig.APP_ENV == "DEV":
+        detail = f"Internal error: {str(exc)}"
+    else:
+        detail = "Oops, Something went worng!"
+
+    return JSONResponse(content={"detail": detail}, status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)

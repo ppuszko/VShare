@@ -1,8 +1,8 @@
 from src.core.db.models import Group
 from src.core.db.unit_of_work import UnitOfWork
-from sqlmodel import select, delete
+from sqlmodel import select
 from src.errors.exceptions import NotFoundError, ForbiddenError
-from src.errors.decorators import handle_exceptions
+
 from .schemas import GroupCreate
 
 
@@ -11,21 +11,30 @@ class GroupService:
     def __init__(self, uow: UnitOfWork):
         self._session = uow.session
 
-    @handle_exceptions
-    async def get_group_by_name(self, group_name: str) -> Group | None:
-        group = (await self._session.exec(select(Group).where(Group.name == group_name))).one_or_none()
-        return group
+    async def get_group_by_name(self, group_name: str) -> Group:
+        group = await self._session.exec(select(Group).where(Group.name == group_name))
+        result = group.one_or_none()
+
+        if result is None:
+            raise NotFoundError
         
-    @handle_exceptions
-    async def get_group_by_uid(self, group_uid: str) -> Group | None:
-        group = (await self._session.exec(select(Group).where(Group.uid == group_uid))).one_or_none()
-        return group
+        return result
+        
+
+    async def get_group_by_uid(self, group_uid: str) -> Group:
+        group = await self._session.exec(select(Group).where(Group.uid == group_uid))
+        result = group.one_or_none()
+
+        if result is None:
+            raise NotFoundError
+        
+        return result
 
     async def group_exist(self, group_name: str) -> bool:
-        return await self.get_group_by_name(group_name) is not None
+        return (await self._session.exec(select(Group).where(Group.uid == group_name))).one_or_none() is not None
 
-    @handle_exceptions
-    async def create_group(self, group_data: GroupCreate) -> Group | None:
+
+    async def create_group(self, group_data: GroupCreate) -> Group:
         if not (await self.group_exist(group_data.name)):
             new_group = Group(**(group_data.model_dump()))
             self._session.add(new_group)

@@ -33,6 +33,7 @@ class VectorService:
         self._client = client
         self._documents = []
         self._emb_counts = []
+        self._succeeded = 0
 
 
     def upload_embeddings(self, documents: Iterator[tuple[str | None, DocumentAdd]])  -> tuple[list[int | None], list[int | None]]:
@@ -142,7 +143,7 @@ class VectorService:
             sparse_iter = self._sparse.query_embed(chunks)
             multi_iter = self._multi.query_embed(chunks)
             self._emb_counts.append(len(chunks))
-            
+
             for chunk, dense, sparse, multi in zip(chunks, dense_iter, sparse_iter, multi_iter):
                 yield models.PointStruct(
                     id=uuid7(),

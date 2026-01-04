@@ -12,6 +12,9 @@ class UserRole(str, enum.Enum):
     GROUP_ADMIN = "GROUP_ADMIN"
     USER = "USER"
 
+    def __init__(self, role: str):
+        self.role = role
+
 class Tier(str, enum.Enum):
     MINI = "MINI"
     NORMAL = "NORMAL"
@@ -41,6 +44,7 @@ class User(SQLModel, table=True):
     refresh_jwt_hash: str = Field(exclude=True, nullable=True)
     is_verified: bool = Field(default=False)
     group_uid: uuid.UUID = Field(foreign_key="groups.uid")
+    doc_count: int = Field(default=0)
     role: UserRole = Field(sa_column=Column(
         PgEnum(UserRole, name="user_role"),
         nullable=False,

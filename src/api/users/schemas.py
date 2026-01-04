@@ -21,6 +21,7 @@ class UserGet(BaseModel):
     uid: UUID
     username: str
     email: str
+    doc_count: int
     role: UserRole
     group: GroupGet 
 

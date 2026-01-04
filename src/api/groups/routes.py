@@ -32,22 +32,20 @@ async def create_group(request: Request, background_tasks: BackgroundTasks,
         user_service = UserService(uow)
 
         group = await group_service.create_group(group_data)
-        if group is not None:
-            user_data.role = UserRole.ADMIN
-            user_data.group_uid = str(group.uid)
-            user = await user_service.create_user(user_data)
 
-            if user is not None:
-                tokenizer = URLTokenizer(TokenType.CONFIRMATION)
+        user_data.role = UserRole.ADMIN
+        user_data.group_uid = str(group.uid)
+        user = await user_service.create_user(user_data)
 
-                link = tokenizer.get_tokenized_link({"email":user.email})
+    tokenizer = URLTokenizer(TokenType.CONFIRMATION)
+    link = tokenizer.get_tokenized_link({"email":user.email})
 
-                await mail_man.send_templated_email({"username":user.username, "link":link}, 
-                                                           [user_data.email], EmailType.CONFIRMATION, 
-                                                           background_tasks)
+    await mail_man.send_templated_email({"username":user.username, "link":link}, 
+                                                [user_data.email], EmailType.CONFIRMATION, 
+                                                background_tasks)
 
-                return JSONResponse(content="Group succesfully created. Check your e-mail to confirm the account")
-            
+    return JSONResponse(content="Group succesfully created. Check your e-mail to confirm the account")
+    
 
 @group_router.get("/my-group", status_code=status.HTTP_200_OK, response_model=GroupGet)
 async def get_group(group_uid: str, uow: UnitOfWork = Depends(get_uow)):
@@ -55,6 +53,4 @@ async def get_group(group_uid: str, uow: UnitOfWork = Depends(get_uow)):
         group_service = GroupService(uow)
         group = await group_service.get_group_by_uid(group_uid)
 
-        if group is not None: 
-                return group
-        raise NotFoundError
+        return group

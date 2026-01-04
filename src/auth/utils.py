@@ -6,6 +6,7 @@ import jwt
 from passlib.context import CryptContext
 
 from src.core.config.auth import AuthConfig
+from src.errors.exceptions import TokenExpiredError, TokenInvalidError
 
 
 
@@ -36,15 +37,17 @@ def create_jwt(user_data: dict, expiry: timedelta, access: bool) -> str:
 
     return token
 
-def decode_jwt(token: str | None) -> dict | None:
-    if token is not None:
-        try:
-            token_data = jwt.decode(
-                jwt=token,
-                key=AuthConfig.JWT_SECRET,
-                algorithms=AuthConfig.JWT_ALGORITHM
-            )
-            return token_data
-        except jwt.PyJWTError as e:
-            logging.exception(f"Failed to decode token. Message: {e}\n")
-    return None
+def decode_jwt(token: str | None) -> dict:
+    if token is None:
+        raise TokenInvalidError
+    try:
+        token_data = jwt.decode(
+            jwt=token,
+            key=AuthConfig.JWT_SECRET,
+            algorithms=AuthConfig.JWT_ALGORITHM
+        )
+        return token_data
+    except jwt.ExpiredSignatureError:
+        raise TokenExpiredError
+    except Exception:
+        raise TokenInvalidError

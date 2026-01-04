@@ -35,6 +35,6 @@ class URLTokenizer:
 
 
     def decode_url_safe_token(self, token: str) -> Any:
-        token_data = self.serializer.loads(token, max_age=self.max_age)
+        token_data = self.serializer.loads(token, max_age=self.max_age * 60)
         return token_data
 
