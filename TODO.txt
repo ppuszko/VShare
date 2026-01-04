@@ -1,5 +1,0 @@
- - Implement logout
- - Handle role return (ADMIN instead or USERROLE.ADMIN)
- - Confirm the invitation pipeline works as intended
- - Test data ingestion/retrieval pipeline
- - Remove comments from all html files
