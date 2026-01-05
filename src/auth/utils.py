@@ -39,10 +39,8 @@ def create_jwt(user_data: dict, expiry: timedelta, access: bool) -> str:
 
 def decode_jwt(token: str | None) -> dict:
     if not token or not isinstance(token, str) or "." not in token:
-        print("token is invalid")
         raise TokenInvalidError
     try:
-        print(f"trying to decode token: {token}")
         token_data = jwt.decode(
             jwt=token,
             key=AuthConfig.JWT_SECRET,
