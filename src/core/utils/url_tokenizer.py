@@ -11,7 +11,7 @@ from src.core.config.app import AppConfig
 
 class TokenType(Enum):
     CONFIRMATION = ("confirm-email", f"http://{AppConfig.DOMAIN}/confirm-email/")
-    INVITATION = ("redeem-invite", f"http://{AppConfig.DOMAIN}/redeem-invite/")
+    INVITATION = ("redeem-invite", f"http://{AppConfig.DOMAIN}/static/finalize-invite.html?token=")
     EMBEDDING_REPORT = ("embedding-report", f"http://{AppConfig.DOMAIN}/embedding-report/")
 
     def __init__(self, salt: str, route: str):

@@ -29,6 +29,7 @@ class UserInvite(BaseModel):
     email: str
     role: UserRole = UserRole.USER
     group_uid: str = ""    
+    group_name: str = ""
 
 
 class UserMissingCredentials(BaseModel):

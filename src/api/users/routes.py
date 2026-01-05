@@ -35,6 +35,7 @@ async def invite_users(users_to_invite: list[UserInvite],
         for user in users_to_invite:
             if not await user_service.user_exist(user.email):
                 user.group_uid = str(curr_user.group.uid)
+                user.group_name = curr_user.group.name 
 
                 link = tokenizer.get_tokenized_link(user.model_dump())
                 recipients = [user.email]
@@ -46,25 +47,28 @@ async def invite_users(users_to_invite: list[UserInvite],
 
 @user_router.get("/validate-invite/{token}", status_code=status.HTTP_200_OK)
 async def validate_invite(token: str):
-    tokenizer = URLTokenizer(TokenType.INVITATION)
+    tokenizer = URLTokenizer(TokenType.INVITATION, 1000) # TODO: remove time limit 1000
     token_data = tokenizer.decode_url_safe_token(token)
-    return {"email": token_data["email"],
-            "group_name": token_data["group_name"],
-            "role": token_data["role"]}
+
+    return JSONResponse(
+        content={"email": token_data["email"],
+        "group_name": token_data["group_name"],
+        "role": token_data["role"]})
 
 
 
-@user_router.get("/redeem-invite/{token}", status_code=status.HTTP_200_OK)
+@user_router.post("/redeem-invite/{token}", status_code=status.HTTP_200_OK)
 async def redeem_invite(token: str, missingCreds: UserMissingCredentials, uow: UnitOfWork = Depends(get_uow)):
 
-    tokenizer = URLTokenizer(TokenType.INVITATION)
+    tokenizer = URLTokenizer(TokenType.INVITATION, 1000) # TODO: remove time limit 1000
     token_data = tokenizer.decode_url_safe_token(token)    
 
     user_data = UserCreate(**(missingCreds.model_dump()), **(token_data))
 
     async with uow:
         user_service = UserService(uow)
-        await user_service.create_user(user_data)
+        user = await user_service.create_user(user_data)
+        user.is_verified = True
 
 
 
@@ -104,7 +108,7 @@ async def sign_in(user_data: UserLogin, response: Response, uow: UnitOfWork = De
 
 
 @user_router.get("/me", status_code=status.HTTP_200_OK, response_model=UserGet)
-async def get_me( curr_user: UserGet = Security(RoleChecker(["USER", "ADMIN"]))):
+async def get_me(curr_user: UserGet = Security(RoleChecker(["USER", "ADMIN"]))):
     return JSONResponse(
         content = {
         "username": curr_user.username,
@@ -116,7 +120,8 @@ async def get_me( curr_user: UserGet = Security(RoleChecker(["USER", "ADMIN"])))
         
 
 @user_router.post("/refresh")
-async def refresh_tokens(response: Response, refresh_jwt: dict = Security(RefreshCookieBearer()), uow: UnitOfWork = Depends(get_uow)):
+async def refresh_tokens(request: Request, response: Response, refresh_jwt: dict = Security(RefreshCookieBearer()), uow: UnitOfWork = Depends(get_uow)):
+
     token = refresh_jwt['token']
     data = refresh_jwt['data']
 
@@ -125,4 +130,4 @@ async def refresh_tokens(response: Response, refresh_jwt: dict = Security(Refres
         user = await user_service.get_user_by_email(data['user']['email'])
         if user and verify_hash(token, user.refresh_jwt_hash):
             access = await user_service.generate_auth_tokens(user, response)
-            return access
+            return {"access_token":access}

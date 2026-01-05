@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Complete Your Registration</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 flex items-center justify-center min-h-screen">
+
+    <div class="bg-white p-8 rounded-xl shadow-lg max-w-md w-full">
+        <h2 class="text-2xl font-bold mb-2 text-gray-800 text-center">Join the Group</h2>
+        <p id="invite-info" class="text-sm text-gray-500 mb-6 text-center">Validating your invitation...</p>
+
+        <form id="registerForm" class="space-y-4 hidden">
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Choose Username</label>
+                <input type="text" id="username" required 
+                       class="mt-1 block w-full border border-gray-300 rounded-md p-2 shadow-sm focus:ring-blue-500 focus:border-blue-500 outline-none">
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-gray-700">Set Password</label>
+                <input type="password" id="password" required 
+                       class="mt-1 block w-full border border-gray-300 rounded-md p-2 shadow-sm focus:ring-blue-500 focus:border-blue-500 outline-none">
+            </div>
+            <button type="submit" class="w-full bg-blue-600 text-white p-2 rounded-lg font-bold hover:bg-blue-700 transition shadow-md">
+                Create Account
+            </button>
+        </form>
+
+        <p id="msg" class="mt-4 text-center text-sm font-medium"></p>
+    </div>
+
+    <script>
+        const API_BASE_URL = "http://localhost:8000";
+
+        // 1. Extract token from URL path. 
+        // Example URL: /static/finalize-invite.html?token=abc...
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+
+        const infoText = document.getElementById('invite-info');
+        const form = document.getElementById('registerForm');
+        const msg = document.getElementById('msg');
+
+        async function init() {
+            if (!token) {
+                infoText.textContent = "Error: No invitation token provided.";
+                infoText.className = "text-red-500 font-bold text-center";
+                return;
+            }
+
+            try {
+                // 2. Validate the token with a GET request
+                // Using the endpoint you specified: /validate-invite/{token}
+                const res = await fetch(`${API_BASE_URL}/validate-invite/${token}`);
+
+                if (res.ok) {
+                    const data = await res.json();
+                    // Assuming data returns { email, role, group_name }
+                    infoText.innerHTML = `Welcome! You've been invited as <b>${data.role}</b> to join <b>${data.group_name || 'the team'}</b>.`;
+                    form.classList.remove('hidden');
+                } else {
+                    const errorData = await res.json();
+                    infoText.textContent = errorData.detail || "This invitation link is invalid or has expired.";
+                    infoText.className = "text-red-500 font-bold text-center";
+                }
+            } catch (err) {
+                infoText.textContent = "Could not connect to the server.";
+                infoText.className = "text-red-500 font-bold text-center";
+            }
+        }
+
+        // 3. Handle the actual registration (POST)
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            const payload = {
+                username: document.getElementById('username').value,
+                password: document.getElementById('password').value
+            };
+
+            msg.textContent = "Creating account...";
+            msg.className = "mt-4 text-center text-blue-500";
+
+            try {
+                // Assuming registration is POST /redeem-invite/{token}
+                const res = await fetch(`${API_BASE_URL}/redeem-invite/${token}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    msg.textContent = "Success! Redirecting to sign-in...";
+                    msg.className = "mt-4 text-center text-green-600 font-bold";
+                    setTimeout(() => window.location.href = "/static/sign-in.html", 2000);
+                } else {
+                    const err = await res.json();
+                    msg.textContent = err.detail || "Registration failed.";
+                    msg.className = "mt-4 text-center text-red-500 font-bold";
+                }
+            } catch (err) {
+                msg.textContent = "Network error. Please try again.";
+                msg.className = "mt-4 text-center text-red-500 font-bold";
+            }
+        });
+
+        // Run on load
+        init();
+    </script>
+</body>
+</html>

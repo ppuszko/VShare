@@ -1,53 +1,76 @@
 const API_BASE_URL = "http://localhost:8000";
 
+let isRefreshing = false;
+let refreshSubscribers = [];
+
+// Helper to notify all pending requests once refresh is done
+function onTokenRefreshed(newAccessToken) {
+    refreshSubscribers.map((callback) => callback(newAccessToken));
+    refreshSubscribers = [];
+}
+
 export async function apiRequest(endpoint, options = {}) {
-    let token = localStorage.getItem("accessToken");
-    
-    // 1. Prepare headers
-    const headers = {
+    const getHeaders = (token) => ({
         "Content-Type": "application/json",
         ...(token && { "Authorization": `Bearer ${token}` }),
         ...options.headers,
-    };
+    });
+
+    let currentToken = localStorage.getItem("accessToken");
 
     try {
-        // 2. Initial Request
         let response = await fetch(`${API_BASE_URL}${endpoint}`, {
             ...options,
-            headers,
+            body: typeof options.body === 'object' ? JSON.stringify(options.body) : options.body,
+            headers: getHeaders(currentToken),
+            credentials: "include",
         });
 
-        // 3. If Unauthorized (401), try to refresh the token
         if (response.status === 401) {
-            console.log("Token expired, attempting silent refresh...");
-            
-            // We call the refresh endpoint. 
-            // Note: If your refresh token is in an HttpOnly cookie, 
-            // you must include credentials: 'include'
+            // If we are already refreshing, wait for it to finish
+            if (isRefreshing) {
+                return new Promise((resolve) => {
+                    refreshSubscribers.push((newToken) => {
+                        resolve(fetch(`${API_BASE_URL}${endpoint}`, {
+                            ...options,
+                            headers: getHeaders(newToken),
+                            credentials: "include",
+                        }));
+                    });
+                });
+            }
+
+            // Start the refresh process
+            isRefreshing = true;
+            console.log("Token expired, attempting singleton refresh...");
+
             const refreshRes = await fetch(`${API_BASE_URL}/refresh`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                // body: JSON.stringify({ refresh_token: localStorage.getItem("refreshToken") }) 
-                // ^ Uncomment if you store refresh token in localStorage instead of cookies
+                credentials: "include",
             });
 
             if (refreshRes.ok) {
                 const data = await refreshRes.json();
+                const newAccessToken = data.access_token;
                 
-                // Save the new access token
-                localStorage.setItem("accessToken", data.access_token);
-                console.log("Token refreshed successfully.");
+                localStorage.setItem("accessToken", newAccessToken);
+                isRefreshing = false;
 
-                // 4. RETRY the original request with the NEW token
-                headers["Authorization"] = `Bearer ${data.access_token}`;
-                response = await fetch(`${API_BASE_URL}${endpoint}`, {
+                // Notify all other 401'd requests
+                onTokenRefreshed(newAccessToken);
+
+                // Retry THIS original request
+                return await fetch(`${API_BASE_URL}${endpoint}`, {
                     ...options,
-                    headers,
+                    headers: getHeaders(newAccessToken),
+                    credentials: "include",
                 });
             } else {
-                // Refresh failed (refresh token also expired)
-                console.warn("Refresh failed. Redirecting to login.");
+                // ONLY clear storage and redirect if the REFRESH itself fails
+                isRefreshing = false;
                 localStorage.removeItem("accessToken");
+                console.error("Session expired. Redirecting...");
                 window.location.href = "/static/sign-in.html";
                 return null;
             }

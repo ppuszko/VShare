@@ -9,7 +9,8 @@ from src.api.users.schemas import UserCreate, UserLogin, UserGet
 from src.api.vectors.schemas import DocumentAdd
 
 from src.core.config.auth import AuthConfig
-from src.auth.utils import create_jwt, decode_jwt
+from src.core.config.app import AppConfig
+from src.auth.utils import create_jwt
 from src.auth.utils import generate_hash, verify_hash
 
 from src.errors.exceptions import ForbiddenError, NotFoundError
@@ -93,8 +94,8 @@ class UserService:
             key="refresh_token", 
             value=refresh_token, 
             httponly=True, 
-            secure=True, 
-            samesite="strict")
+            secure=AppConfig.APP_ENV != "DEV",  
+            samesite="lax")
         
         return access_token
     
