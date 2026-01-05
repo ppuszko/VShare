@@ -3,47 +3,61 @@ const API_BASE_URL = "http://localhost:8000";
 let isRefreshing = false;
 let refreshSubscribers = [];
 
-// Helper to notify all pending requests once refresh is done
 function onTokenRefreshed(newAccessToken) {
     refreshSubscribers.map((callback) => callback(newAccessToken));
     refreshSubscribers = [];
 }
 
 export async function apiRequest(endpoint, options = {}) {
-    const getHeaders = (token) => ({
-        "Content-Type": "application/json",
-        ...(token && { "Authorization": `Bearer ${token}` }),
-        ...options.headers,
-    });
+    const getHeaders = (token) => {
+        const headers = { ...options.headers };
+        if (token) headers["Authorization"] = `Bearer ${token}`;
+        
+        // ONLY add Content-Type: application/json if we are NOT sending FormData
+        if (!(options.body instanceof FormData)) {
+            headers["Content-Type"] = "application/json";
+        }
+        return headers;
+    };
+
+    let requestBody = options.body;
+    // Only stringify if it's a plain object, NOT FormData
+    if (requestBody && typeof requestBody === 'object' && !(requestBody instanceof FormData)) {
+        requestBody = JSON.stringify(requestBody);
+    }
 
     let currentToken = localStorage.getItem("accessToken");
 
     try {
-        let response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        let fetchOptions = {
             ...options,
-            body: typeof options.body === 'object' ? JSON.stringify(options.body) : options.body,
+            body: requestBody,
             headers: getHeaders(currentToken),
             credentials: "include",
-        });
+        };
 
+        let response = await fetch(`${API_BASE_URL}${endpoint}`, fetchOptions);
+
+        // --- 1. HANDLE 403 FORBIDDEN / INVALID ---
+        if (response.status === 403) {
+            console.warn("Access forbidden or token invalid. Redirecting to login...");
+            localStorage.removeItem("accessToken");
+            window.location.href = "/static/sign-in.html";
+            return null;
+        }
+
+        // --- 2. HANDLE 401 EXPIRED (SILENT REFRESH) ---
         if (response.status === 401) {
-            // If we are already refreshing, wait for it to finish
             if (isRefreshing) {
                 return new Promise((resolve) => {
                     refreshSubscribers.push((newToken) => {
-                        resolve(fetch(`${API_BASE_URL}${endpoint}`, {
-                            ...options,
-                            headers: getHeaders(newToken),
-                            credentials: "include",
-                        }));
+                        fetchOptions.headers = getHeaders(newToken);
+                        resolve(fetch(`${API_BASE_URL}${endpoint}`, fetchOptions));
                     });
                 });
             }
 
-            // Start the refresh process
             isRefreshing = true;
-            console.log("Token expired, attempting singleton refresh...");
-
             const refreshRes = await fetch(`${API_BASE_URL}/refresh`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
@@ -53,24 +67,15 @@ export async function apiRequest(endpoint, options = {}) {
             if (refreshRes.ok) {
                 const data = await refreshRes.json();
                 const newAccessToken = data.access_token;
-                
                 localStorage.setItem("accessToken", newAccessToken);
                 isRefreshing = false;
-
-                // Notify all other 401'd requests
                 onTokenRefreshed(newAccessToken);
 
-                // Retry THIS original request
-                return await fetch(`${API_BASE_URL}${endpoint}`, {
-                    ...options,
-                    headers: getHeaders(newAccessToken),
-                    credentials: "include",
-                });
+                fetchOptions.headers = getHeaders(newAccessToken);
+                return await fetch(`${API_BASE_URL}${endpoint}`, fetchOptions);
             } else {
-                // ONLY clear storage and redirect if the REFRESH itself fails
                 isRefreshing = false;
                 localStorage.removeItem("accessToken");
-                console.error("Session expired. Redirecting...");
                 window.location.href = "/static/sign-in.html";
                 return null;
             }

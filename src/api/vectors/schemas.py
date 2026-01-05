@@ -16,5 +16,5 @@ class DocumentAdd(BaseModel):
     storage_path: str | None = None
     created_at: datetime | None = None
     title: str 
-    category_id: int 
+    category_id: int | None
 

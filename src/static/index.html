@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My RAG App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50">
+
+    <nav class="bg-white border-b border-gray-200 fixed w-full z-10 top-0">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16 items-center">
+                <div class="flex items-center gap-8">
+                    <span class="font-bold text-xl text-blue-600 cursor-pointer" onclick="loadView('home.html')">VShare</span>
+                    <div class="hidden md:flex space-x-4">
+                        <button onclick="loadView('home.html')" class="text-gray-600 hover:text-blue-600 px-3 py-2 font-medium">Home</button>
+                        <button onclick="loadView('upload.html')" class="text-gray-600 hover:text-blue-600 px-3 py-2 font-medium">Upload Data</button>
+                        <button onclick="loadView('search.html')" class="text-gray-600 hover:text-blue-600 px-3 py-2 font-medium">Search</button>
+                    </div>
+                </div>
+                <button onclick="loadView('my-account.html')" class="bg-gray-100 hover:bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-medium transition">
+                    My Account
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <main id="content-area" class="pt-20">
+        <div class="flex justify-center items-center h-64">
+            <p class="text-gray-400 animate-pulse">Loading...</p>
+        </div>
+    </main>
+
+    <script type="module">
+        // Import your existing apiRequest just in case you need it for auth checks
+        import { apiRequest } from './api.js';
+
+        async function loadView(pageName) {
+            const container = document.getElementById('content-area');
+            
+            try {
+                // Fetch the HTML file as text
+                const response = await fetch(`/static/${pageName}`);
+                if (!response.ok) throw new Error("Page not found");
+                
+                const html = await response.text();
+                
+                // Extract ONLY the inner contents of <body> if you want to be precise,
+                // or just dump the whole thing if your sub-pages are simple.
+                container.innerHTML = html;
+
+                // CRITICAL: Manually execute scripts found in the injected HTML
+                const scripts = container.querySelectorAll("script");
+                scripts.forEach(oldScript => {
+                    const newScript = document.createElement("script");
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    if (oldScript.type === 'module') newScript.type = 'module';
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+
+                // Update URL without reloading (so back button works)
+                window.history.pushState({page: pageName}, '', `#${pageName}`);
+
+            } catch (err) {
+                container.innerHTML = `<div class="p-10 text-red-500">Error loading page: ${pageName}</div>`;
+            }
+        }
+
+        // Globalize the function so the onclicks work
+        window.loadView = loadView;
+
+        // Handle browser back/forward buttons
+        window.onpopstate = (event) => {
+            if (event.state && event.state.page) loadView(event.state.page);
+        };
+
+        // Initial load
+        window.onload = () => {
+            const initialPage = window.location.hash.replace('#', '') || 'home.html';
+            loadView(initialPage);
+        };
+    </script>
+</body>
+</html>

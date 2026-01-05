@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Upload Documents</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gray-50 p-6 md:p-12">
+    <div class="max-w-4xl mx-auto">
+        <div class="flex items-center justify-between mb-8">
+            <h1 class="text-3xl font-bold text-gray-800">Upload Data</h1>
+            <button onclick="loadView('home.html')" class="text-blue-600 hover:underline">← Back to Home</button>
+        </div>
+
+        <div class="bg-white p-8 rounded-xl shadow-sm border border-gray-100">
+            <form id="uploadForm" class="space-y-6">
+                <div id="dropzone" class="border-2 border-dashed border-gray-300 rounded-xl p-10 flex flex-col items-center justify-center hover:border-blue-400 transition cursor-pointer bg-gray-50">
+                    <svg class="w-12 h-12 text-gray-400 mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                    <p class="text-gray-600 font-medium">Click to select or drag and drop files</p>
+                    <p class="text-xs text-gray-400 mt-1">PDF, TXT, or DOCX up to 10MB each</p>
+                    <input type="file" id="fileInput" multiple class="hidden">
+                </div>
+
+                <div id="fileList" class="space-y-4">
+                    </div>
+
+                <div id="statusMsg" class="hidden p-4 rounded-lg text-sm font-medium"></div>
+
+                <button type="submit" id="submitBtn" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition disabled:bg-gray-400 disabled:cursor-not-allowed">
+                    Start Processing Embeddings
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script type="module">
+        import { apiRequest } from './api.js';
+
+        const fileInput = document.getElementById('fileInput');
+        const dropzone = document.getElementById('dropzone');
+        const fileList = document.getElementById('fileList');
+        const uploadForm = document.getElementById('uploadForm');
+        const statusMsg = document.getElementById('statusMsg');
+
+        let selectedFiles = [];
+
+        function updateFileList() {
+            fileList.innerHTML = selectedFiles.length > 0 ? '<h3 class="font-bold text-gray-700 border-b pb-2 text-sm">File Details & Category</h3>' : '';
+            
+            selectedFiles.forEach((file, index) => {
+                const row = document.createElement('div');
+                row.className = "flex flex-col md:flex-row gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200 animate-in fade-in duration-200";
+                row.innerHTML = `
+                    <div class="flex-1 min-w-0">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Filename</p>
+                        <p class="text-sm font-semibold truncate text-gray-700" title="${file.name}">${file.name}</p>
+                    </div>
+                    <div class="flex-1">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-tight mb-1">Title</p>
+                        <input type="text" placeholder="Doc Title" required 
+                               class="doc-title w-full p-2 border rounded text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="w-full md:w-32">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-tight mb-1">Category ID</p>
+                        <input type="number" placeholder="ID" required value="1"
+                               class="doc-category w-full p-2 border rounded text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    <div class="flex items-end pb-1">
+                        <button type="button" class="remove-file text-gray-400 hover:text-red-500 transition px-2" data-index="${index}">
+                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
+                        </button>
+                    </div>
+                `;
+                fileList.appendChild(row);
+            });
+        }
+
+        dropzone.onclick = () => fileInput.click();
+        
+        fileInput.onchange = (e) => {
+            selectedFiles = [...selectedFiles, ...Array.from(e.target.files)];
+            updateFileList();
+            fileInput.value = ""; 
+        };
+
+        fileList.onclick = (e) => {
+            const btn = e.target.closest('.remove-file');
+            if (btn) {
+                const idx = btn.getAttribute('data-index');
+                selectedFiles.splice(idx, 1);
+                updateFileList();
+            }
+        };
+
+        uploadForm.onsubmit = async (e) => {
+            e.preventDefault();
+            if (selectedFiles.length === 0) return;
+
+            const btn = document.getElementById('submitBtn');
+            btn.disabled = true;
+            statusMsg.className = "p-4 rounded-lg text-sm font-medium bg-blue-50 text-blue-700";
+            statusMsg.textContent = "Uploading data...";
+            statusMsg.classList.remove('hidden');
+
+            const formData = new FormData();
+            
+            // Append files to 'files' key
+            selectedFiles.forEach(file => {
+                formData.append('files', file);
+            });
+
+            // Map inputs to DocumentAdd model structure
+            const titles = Array.from(document.querySelectorAll('.doc-title')).map(el => el.value);
+            const categories = Array.from(document.querySelectorAll('.doc-category')).map(el => parseInt(el.value));
+            
+            const metadata = titles.map((title, i) => ({
+                title: title,
+                category_id: categories[i] // Correct key for Pydantic
+            }));
+
+            // Key must match the 'metadata' parameter in your FastAPI upload_data function
+            formData.append('metadata_list', JSON.stringify(metadata));
+
+            try {
+                const res = await apiRequest("/upload", {
+                    method: "POST",
+                    body: formData
+                });
+
+                if (res && res.ok) {
+                    statusMsg.className = "p-4 rounded-lg text-sm font-medium bg-green-50 text-green-700";
+                    statusMsg.textContent = "Success! Upload complete. Background processing started.";
+                    selectedFiles = [];
+                    updateFileList();
+                } else {
+                    const errData = res ? await res.json() : {};
+                    statusMsg.className = "p-4 rounded-lg text-sm font-medium bg-red-50 text-red-700";
+                    statusMsg.textContent = `Upload failed: ${errData.detail || 'Server error'}`;
+                }
+            } catch (err) {
+                statusMsg.textContent = "Network error. Connection lost.";
+            } finally {
+                btn.disabled = false;
+            }
+        };
+    </script>
+</body>
+</html>

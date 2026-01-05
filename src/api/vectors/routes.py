@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends, UploadFile, Security
+from pydantic import TypeAdapter
+
+from fastapi import APIRouter, Depends, UploadFile, Security, Form, File
 from fastapi.responses import JSONResponse
 from fastapi import BackgroundTasks
 
@@ -24,13 +26,16 @@ vector_router = APIRouter()
 
 
 @vector_router.post("/upload")
-async def upload_data(files: list[UploadFile], 
-                      metadata: list[DocumentAdd],
+async def upload_data(files: list[UploadFile] = File(...), 
+                      metadata_list: str = Form(...),
                       user: UserGet = Security(RoleChecker(["USER", "ADMIN"])), 
                       uow: UnitOfWork = Depends(get_uow),
                       cache_manager: CacheManager = Depends(get_cache_manager),
                       file_man: FileManager = Depends(get_file_man)):
     
+    metadata = TypeAdapter(list[DocumentAdd]).validate_json(metadata_list)
+
+
     if len(files) != len(metadata):
         raise Exception("Amount of files doesn't match amount of associated metadata!")
 

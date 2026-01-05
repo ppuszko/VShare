@@ -92,8 +92,13 @@
 
         // 1. Function to Load Data
         async function loadProfile() {
+            if (!localStorage.getItem("accessToken")) {
+                window.location.replace("/static/sign-in.html");
+                return;
+            }
+
             const res = await apiRequest("/me"); 
-            if (!res || !res.ok) return;
+            if (!res) return;
 
             const user = await res.json();
             document.getElementById('disp-username').textContent = user.username;
