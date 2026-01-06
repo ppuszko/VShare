@@ -11,13 +11,13 @@ from src.errors.exceptions import NotVerifiedError, ForbiddenError, TokenInvalid
 
 class RefreshCookieBearer:
     def __init__(self, cookie_name: str = "refresh_token"):
-        #self.cookie_handler = APIKeyCookie(name=cookie_name)
+        self.cookie_handler = APIKeyCookie(name=cookie_name)
         self.cookie_name = cookie_name
 
     async def __call__(self, request: Request) -> dict:
         print("entered cookie bearer")
-        #refresh_token = await self.cookie_handler.__call__(request)
-        refresh_token = request.cookies.get(self.cookie_name)
+        refresh_token = await self.cookie_handler.__call__(request)
+        #refresh_token = request.cookies.get(self.cookie_name)
         print(refresh_token)
 
         if not refresh_token:

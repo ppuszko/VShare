@@ -44,10 +44,36 @@
         const statusMsg = document.getElementById('statusMsg');
 
         let selectedFiles = [];
+        let groupCategories = {}; // Format: { "CategoryName": ID }
+
+        // Fetch categories from the backend
+        async function initCategories() {
+            try {
+                const res = await apiRequest("/fetch-categories");
+                if (res && res.ok) {
+                    groupCategories = await res.json();
+                } else {
+                    console.error("Failed to load categories");
+                    statusMsg.className = "p-4 mb-4 rounded-lg text-sm font-medium bg-yellow-50 text-yellow-700";
+                    statusMsg.textContent = "Warning: Could not load categories. Using defaults.";
+                    statusMsg.classList.remove('hidden');
+                    // Fallback if endpoint fails
+                    groupCategories = { "Uncathegorized": 1 };
+                }
+            } catch (err) {
+                console.error("Error fetching categories:", err);
+            }
+        }
 
         function updateFileList() {
             fileList.innerHTML = selectedFiles.length > 0 ? '<h3 class="font-bold text-gray-700 border-b pb-2 text-sm">File Details & Category</h3>' : '';
             
+            // Create options string for the select dropdown
+            const categoryOptions = Object.entries(groupCategories).map(([name, id]) => {
+                const isDefault = name === "Uncathegorized" ? "selected" : "";
+                return `<option value="${id}" ${isDefault}>${name}</option>`;
+            }).join('');
+
             selectedFiles.forEach((file, index) => {
                 const row = document.createElement('div');
                 row.className = "flex flex-col md:flex-row gap-4 p-4 bg-gray-50 rounded-lg border border-gray-200 animate-in fade-in duration-200";
@@ -61,10 +87,11 @@
                         <input type="text" placeholder="Doc Title" required 
                                class="doc-title w-full p-2 border rounded text-sm outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
-                    <div class="w-full md:w-32">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-tight mb-1">Category ID</p>
-                        <input type="number" placeholder="ID" required value="1"
-                               class="doc-category w-full p-2 border rounded text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                    <div class="w-full md:w-48">
+                        <p class="text-[10px] font-bold text-gray-400 uppercase tracking-tight mb-1">Category</p>
+                        <select class="doc-category w-full p-2 border rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                            ${categoryOptions}
+                        </select>
                     </div>
                     <div class="flex items-end pb-1">
                         <button type="button" class="remove-file text-gray-400 hover:text-red-500 transition px-2" data-index="${index}">
@@ -76,6 +103,7 @@
             });
         }
 
+        // Event Listeners
         dropzone.onclick = () => fileInput.click();
         
         fileInput.onchange = (e) => {
@@ -105,21 +133,19 @@
 
             const formData = new FormData();
             
-            // Append files to 'files' key
             selectedFiles.forEach(file => {
                 formData.append('files', file);
             });
 
-            // Map inputs to DocumentAdd model structure
             const titles = Array.from(document.querySelectorAll('.doc-title')).map(el => el.value);
             const categories = Array.from(document.querySelectorAll('.doc-category')).map(el => parseInt(el.value));
             
             const metadata = titles.map((title, i) => ({
                 title: title,
-                category_id: categories[i] // Correct key for Pydantic
+                category_id: categories[i]
             }));
 
-            // Key must match the 'metadata' parameter in your FastAPI upload_data function
+            // Key matches your backend: metadata
             formData.append('metadata_list', JSON.stringify(metadata));
 
             try {
@@ -144,6 +170,9 @@
                 btn.disabled = false;
             }
         };
+
+        // Initialize categories on load
+        initCategories();
     </script>
 </body>
 </html>

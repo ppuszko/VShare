@@ -14,7 +14,7 @@ export async function apiRequest(endpoint, options = {}) {
         if (token) headers["Authorization"] = `Bearer ${token}`;
         
         // ONLY add Content-Type: application/json if we are NOT sending FormData
-        if (!(options.body instanceof FormData)) {
+        if (options.body && !(options.body instanceof FormData)) {
             headers["Content-Type"] = "application/json";
         }
         return headers;

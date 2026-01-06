@@ -31,10 +31,10 @@ def send_request(url: str, body: dict | None = None):
     response.raise_for_status()
 
 @app.task
-def compute_and_insert_embeddings(files_to_embed: list[DocumentAdd], request_url: str):
-    print("Test: START WORKER TASK")
+def compute_and_insert_embeddings(files_to_embed: list[dict], request_url: str):
     fs = get_file_man()
-    documents = fs.extract_text_from_files(files_to_embed)
+    files_to_embed_objects = [DocumentAdd(**file) for file in files_to_embed]
+    documents = fs.extract_text_from_files(files_to_embed_objects)
     
     vector_service = VectorService(global_store.dense_model, 
                                     global_store.sparse_model, 
@@ -47,4 +47,4 @@ def compute_and_insert_embeddings(files_to_embed: list[DocumentAdd], request_url
         "emb_counts": emb_counts
     }
     send_request.delay(request_url, body)
-    print("Test: FINISH WORKER TASK")
+

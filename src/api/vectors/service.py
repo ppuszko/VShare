@@ -151,6 +151,7 @@ class VectorService:
                         "user_uid":metadata.user_uid,
                         "created_at":metadata.created_at,
                         "category_id":metadata.category_id,
+                        "doc_id":metadata.id,
                         "chunk_text":chunk},
                     vector={
                         "dense":dense,

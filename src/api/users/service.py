@@ -101,25 +101,33 @@ class UserService:
     
 
     async def add_documents(self, documents: list[str | None], documents_metadata: list[DocumentAdd], user: UserGet) -> list[DocumentAdd]:
-        data = []
+        saved_docs = []
         doc_count = 0
 
         for file, meta in zip(documents, documents_metadata):
             if file is not None:
                 doc_count += 1
+
+
                 meta.group_uid = user.group.uid
                 meta.user_uid = user.uid
                 meta.storage_path = file
 
-                document = Document(**(meta.model_dump()))
-                self._session.add(document)
-            data.append(meta)
+                db_doc = Document(**(meta.model_dump()))
+                self._session.add(db_doc)
+
+                saved_docs.append(db_doc)
+            else:
+                saved_docs.append(meta)
 
         if doc_count != 0:
+            await self._session.flush()
+
             curr_user = await self.get_user_by_email(user.email)
-            if curr_user is not None:
+            if curr_user:
                 await self.update_user(curr_user, {"doc_count": user.doc_count + doc_count})
             
-        return [DocumentAdd(**(doc.model_dump())) for doc in data]
+        return [DocumentAdd(**(doc.model_dump())) for doc in saved_docs]
 
+    
 

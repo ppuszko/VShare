@@ -49,7 +49,7 @@ class FileManager:
                 extension = Path(file.storage_path).suffix.lstrip(".")
                 extractor = self._extractors.get(extension)
                 if extractor is not None:
-                    yield extractor(file), file
+                    yield extractor(file.storage_path), file
             else:
                 yield None, file
 

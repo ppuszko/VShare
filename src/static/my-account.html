@@ -63,104 +63,87 @@
     </div>
 
     <script type="module">
-        import { apiRequest } from './api.js';
+    import { apiRequest } from './api.js';
 
-        const inviteListContainer = document.getElementById('inviteList');
+    const inviteListContainer = document.getElementById('inviteList');
 
-        // Helper to create a new row in the UI
-        function createInviteRow() {
-            const row = document.createElement('div');
-            row.className = "flex gap-2 items-center invite-row animate-in fade-in duration-300";
-            row.innerHTML = `
-                <input type="email" placeholder="Email" class="invite-email flex-1 border border-gray-200 p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                <select class="invite-role border border-gray-200 p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-                    <option value="USER">USER</option>
-                    <option value="ADMIN">ADMIN</option>
-                </select>
-                <button class="remove-row text-gray-300 hover:text-red-500 px-2 transition">×</button>
-            `;
-            
-            // Remove row logic
-            row.querySelector('.remove-row').addEventListener('click', () => {
-                if (document.querySelectorAll('.invite-row').length > 1) {
-                    row.remove();
-                }
-            });
-            
-            inviteListContainer.appendChild(row);
+    function createInviteRow() {
+        const row = document.createElement('div');
+        row.className = "flex gap-2 items-center invite-row animate-in fade-in duration-300";
+        row.innerHTML = `
+            <input type="email" placeholder="Email" class="invite-email flex-1 border border-gray-200 p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+            <select class="invite-role border border-gray-200 p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                <option value="USER">USER</option>
+                <option value="ADMIN">ADMIN</option>
+            </select>
+            <button class="remove-row text-gray-300 hover:text-red-500 px-2 transition">×</button>
+        `;
+        row.querySelector('.remove-row').addEventListener('click', () => {
+            if (document.querySelectorAll('.invite-row').length > 1) row.remove();
+        });
+        inviteListContainer.appendChild(row);
+    }
+
+    async function loadProfile() {
+        // If apiRequest returns null, it means it already handled the 401/403 redirect
+        const res = await apiRequest("/me"); 
+        if (!res || !res.ok) return;
+
+        const user = await res.json();
+        document.getElementById('disp-username').textContent = user.username;
+        document.getElementById('disp-email').textContent = user.email;
+        document.getElementById('disp-role').textContent = user.role;
+        document.getElementById('disp-docs').textContent = user.doc_count ?? 0;
+
+        if (user.role === "ADMIN") {
+            document.getElementById('adminPanel').classList.remove('hidden');
+            if (inviteListContainer.children.length === 0) createInviteRow();
+        }
+    }
+
+    document.getElementById('addInviteRow').addEventListener('click', createInviteRow);
+
+    document.getElementById('sendInvites').addEventListener('click', async () => {
+        const inviteMsg = document.getElementById('inviteMsg');
+        const rows = document.querySelectorAll('.invite-row');
+        
+        const invites = Array.from(rows).map(row => ({
+            email: row.querySelector('.invite-email').value.trim(),
+            role: row.querySelector('.invite-role').value,
+            group_uid: "00000000-0000-0000-0000-000000000000" // Use a valid UUID string if backend requires it
+        })).filter(invite => invite.email !== "");
+
+        if (invites.length === 0) {
+            inviteMsg.textContent = "Please enter an email.";
+            inviteMsg.className = "mt-2 text-xs text-center text-red-500";
+            return;
         }
 
-        // 1. Function to Load Data
-        async function loadProfile() {
-            if (!localStorage.getItem("accessToken")) {
-                window.location.replace("/static/sign-in.html");
-                return;
-            }
+        inviteMsg.textContent = "Sending...";
+        // Note: Pass 'invites' as an OBJECT, api.js will stringify it
+        const res = await apiRequest("/invite-user", {
+            method: "POST",
+            body: invites 
+        });
 
-            const res = await apiRequest("/me"); 
-            if (!res) return;
-
-            const user = await res.json();
-            document.getElementById('disp-username').textContent = user.username;
-            document.getElementById('disp-email').textContent = user.email;
-            document.getElementById('disp-role').textContent = user.role;
-            document.getElementById('disp-docs').textContent = user.doc_count ?? 0;
-
-            if (user.role === "ADMIN") {
-                document.getElementById('adminPanel').classList.remove('hidden');
-                // Initialize with one row
-                if (inviteListContainer.children.length === 0) createInviteRow();
-            }
+        if (res && res.ok) {
+            inviteMsg.textContent = "Invitations sent!";
+            inviteMsg.className = "mt-2 text-xs text-center text-green-600";
+            inviteListContainer.innerHTML = '';
+            createInviteRow();
+        } else {
+            inviteMsg.textContent = "Error sending invites.";
+            inviteMsg.className = "mt-2 text-xs text-center text-red-500";
         }
+    });
 
-        // Add row on button click
-        document.getElementById('addInviteRow').addEventListener('click', createInviteRow);
+    document.getElementById('logoutBtn').addEventListener('click', () => {
+        localStorage.removeItem("accessToken");
+        window.location.href = "/static/sign-in.html";
+    });
 
-        // 2. Handle Invitation Sending
-        document.getElementById('sendInvites').addEventListener('click', async () => {
-            const inviteMsg = document.getElementById('inviteMsg');
-            const rows = document.querySelectorAll('.invite-row');
-            
-            // Map the rows to the UserInvite model structure
-            const invites = Array.from(rows).map(row => ({
-                email: row.querySelector('.invite-email').value.trim(),
-                role: row.querySelector('.invite-role').value,
-                group_uid: "" // Endpoint fills this, but we send empty string per model
-            })).filter(invite => invite.email !== "");
-
-            if (invites.length === 0) {
-                inviteMsg.textContent = "Please enter at least one valid email.";
-                inviteMsg.className = "mt-2 text-xs text-center text-red-500";
-                return;
-            }
-
-            inviteMsg.textContent = "Sending...";
-            inviteMsg.className = "mt-2 text-xs text-center text-blue-500";
-
-            const res = await apiRequest("/invite-user", {
-                method: "POST",
-                body: JSON.stringify(invites)
-            });
-
-            if (res && res.ok) {
-                inviteMsg.textContent = `Success! ${invites.length} invitation(s) sent.`;
-                inviteMsg.className = "mt-2 text-xs text-center text-green-600";
-                // Clear and reset rows
-                inviteListContainer.innerHTML = '';
-                createInviteRow();
-            } else {
-                inviteMsg.textContent = "Error sending invites.";
-                inviteMsg.className = "mt-2 text-xs text-center text-red-500";
-            }
-        });
-
-        // 3. Handle Logout
-        document.getElementById('logoutBtn').addEventListener('click', () => {
-            localStorage.removeItem("accessToken");
-            window.location.href = "/static/sign-in.html";
-        });
-
-        window.onload = loadProfile;
-    </script>
+    // Start loading immediately
+    loadProfile();
+</script>
 </body>
 </html>

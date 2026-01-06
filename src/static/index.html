@@ -33,24 +33,26 @@
     </main>
 
     <script type="module">
-        // Import your existing apiRequest just in case you need it for auth checks
         import { apiRequest } from './api.js';
 
         async function loadView(pageName) {
             const container = document.getElementById('content-area');
             
             try {
-                // Fetch the HTML file as text
-                const response = await fetch(`/static/${pageName}`);
-                if (!response.ok) throw new Error("Page not found");
+                // CHANGE: Use apiRequest instead of native fetch
+                // This ensures Authorization headers are added and 401s trigger a refresh
+                const response = await apiRequest(`/static/${pageName}`);
+                
+                if (!response || !response.ok) {
+                    throw new Error("Page not found or session expired");
+                }
                 
                 const html = await response.text();
                 
-                // Extract ONLY the inner contents of <body> if you want to be precise,
-                // or just dump the whole thing if your sub-pages are simple.
+                // Inject the content
                 container.innerHTML = html;
 
-                // CRITICAL: Manually execute scripts found in the injected HTML
+                // Re-execute scripts
                 const scripts = container.querySelectorAll("script");
                 scripts.forEach(oldScript => {
                     const newScript = document.createElement("script");
@@ -60,23 +62,20 @@
                     oldScript.parentNode.replaceChild(newScript, oldScript);
                 });
 
-                // Update URL without reloading (so back button works)
                 window.history.pushState({page: pageName}, '', `#${pageName}`);
 
             } catch (err) {
-                container.innerHTML = `<div class="p-10 text-red-500">Error loading page: ${pageName}</div>`;
+                console.error("View Load Error:", err);
+                container.innerHTML = `<div class="p-10 text-red-500 text-center font-bold">Error loading page: ${pageName}</div>`;
             }
         }
 
-        // Globalize the function so the onclicks work
         window.loadView = loadView;
 
-        // Handle browser back/forward buttons
         window.onpopstate = (event) => {
             if (event.state && event.state.page) loadView(event.state.page);
         };
 
-        // Initial load
         window.onload = () => {
             const initialPage = window.location.hash.replace('#', '') || 'home.html';
             loadView(initialPage);

@@ -1,25 +1,23 @@
 from pydantic import TypeAdapter
 
 from fastapi import APIRouter, Depends, UploadFile, Security, Form, File
-from fastapi.responses import JSONResponse
 from fastapi import BackgroundTasks
 
-from src.core.utils.cache_manager import CacheManager, get_cache_manager
-
+from src.api.users.service import UserService
+from src.api.groups.service import GroupService
 from src.core.db.unit_of_work import UnitOfWork, get_uow
 from src.api.users.schemas import UserGet
 from src.api.vectors.schemas import QueryFilters, DocumentAdd
 from src.api.vectors.service import VectorService, get_querying_vector_service
+from src.core.inference.tasks import compute_and_insert_embeddings
 
-from src.api.users.service import UserService
 from src.core.utils.file_manager import FileManager, get_file_man
 from src.core.utils.mail_manager import MailManager, EmailType, get_mail_man
+from src.core.utils.cache_manager import CacheManager, get_cache_manager
 from src.core.utils.url_tokenizer import URLTokenizer, TokenType
-from src.core.config.file import FileConfig
 
 from src.auth.dependencies import RoleChecker
 
-from src.core.inference.tasks import compute_and_insert_embeddings
 
 
 vector_router = APIRouter()
@@ -45,17 +43,21 @@ async def upload_data(files: list[UploadFile] = File(...),
     async with uow:
         user_service = UserService(uow)
         files_to_embed = await user_service.add_documents(documents, metadata, user)
+        
+        
 
-    tokenizer = URLTokenizer(TokenType.EMBEDDING_REPORT)
-    user_data = {"user_uid": str(user.uid),
-                 "user_email": user.email,
-                 "username": user.username}
-    ticket = tokenizer.create_url_safe_token(user_data)
-    url = tokenizer.get_tokenized_link(user_data)
+        tokenizer = URLTokenizer(TokenType.EMBEDDING_REPORT)
+        user_data = {"user_uid": str(user.uid),
+                    "user_email": user.email,
+                    "username": user.username}
+        ticket = tokenizer.create_url_safe_token(user_data)
+        url = tokenizer.get_tokenized_link(user_data)
 
-    await cache_manager.insert_ticket(ticket)
 
-    compute_and_insert_embeddings.delay(files_to_embed, url)
+        await cache_manager.insert_ticket(ticket)
+
+    files_to_embed_dicts = [file.model_dump(mode="json") for file in files_to_embed]
+    compute_and_insert_embeddings.delay(files_to_embed_dicts, url)
         
     
 @vector_router.post("/embedding-report/{ticket}")
@@ -74,9 +76,26 @@ async def embedding_report(ticket: str, body: dict,
         await mail_man.send_templated_email(body, recipients, EmailType.EMBEDDING_REPORT, background_tasks)
 
 
+
 @vector_router.get("/search")
 async def search(query: str, query_filters: QueryFilters, 
                  user: UserGet = Security(RoleChecker(["USER", "ADMIN"])), 
                  vector_service: VectorService = Depends(get_querying_vector_service)):
 
     res = await vector_service.query_db(query_filters, query)
+
+
+@vector_router.get("/fetch-categories")
+async def fetch_group_categories(curr_user: UserGet = Security(RoleChecker(["ADMIN", "USER"])), 
+                                 uow: UnitOfWork = Depends(get_uow),
+                                 cache_man: CacheManager = Depends(get_cache_manager)):
+    group_uid = str(curr_user.group.uid)
+    group_categories = await cache_man.get_cached_categories(group_uid)
+    if not bool(group_categories):
+        async with uow:
+            group_service = GroupService(uow)
+            group_categories = await group_service.get_group_categories(group_uid)
+
+        await cache_man.set_cached_categories(group_uid, group_categories) 
+
+    return group_categories
