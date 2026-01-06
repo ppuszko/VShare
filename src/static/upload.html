@@ -22,8 +22,7 @@
                     <input type="file" id="fileInput" multiple class="hidden">
                 </div>
 
-                <div id="fileList" class="space-y-4">
-                    </div>
+                <div id="fileList" class="space-y-4"></div>
 
                 <div id="statusMsg" class="hidden p-4 rounded-lg text-sm font-medium"></div>
 
@@ -44,21 +43,17 @@
         const statusMsg = document.getElementById('statusMsg');
 
         let selectedFiles = [];
-        let groupCategories = {}; // Format: { "CategoryName": ID }
+        let groupCategories = {}; // Data format: { "1": "CategoryName", "2": "OtherName" }
 
-        // Fetch categories from the backend
         async function initCategories() {
             try {
                 const res = await apiRequest("/fetch-categories");
                 if (res && res.ok) {
                     groupCategories = await res.json();
+                    console.log("Categories Loaded (ID:Name):", groupCategories);
+                    if (selectedFiles.length > 0) updateFileList();
                 } else {
-                    console.error("Failed to load categories");
-                    statusMsg.className = "p-4 mb-4 rounded-lg text-sm font-medium bg-yellow-50 text-yellow-700";
-                    statusMsg.textContent = "Warning: Could not load categories. Using defaults.";
-                    statusMsg.classList.remove('hidden');
-                    // Fallback if endpoint fails
-                    groupCategories = { "Uncathegorized": 1 };
+                    console.error("Could not load categories");
                 }
             } catch (err) {
                 console.error("Error fetching categories:", err);
@@ -68,10 +63,9 @@
         function updateFileList() {
             fileList.innerHTML = selectedFiles.length > 0 ? '<h3 class="font-bold text-gray-700 border-b pb-2 text-sm">File Details & Category</h3>' : '';
             
-            // Create options string for the select dropdown
-            const categoryOptions = Object.entries(groupCategories).map(([name, id]) => {
-                const isDefault = name === "Uncathegorized" ? "selected" : "";
-                return `<option value="${id}" ${isDefault}>${name}</option>`;
+            // Explicitly mapping: id (key) to value, name (value) to display text
+            const categoryOptions = Object.entries(groupCategories).map(([cat_id, cat_name]) => {
+                return `<option value="${cat_id}">${cat_name}</option>`;
             }).join('');
 
             selectedFiles.forEach((file, index) => {
@@ -80,32 +74,28 @@
                 row.innerHTML = `
                     <div class="flex-1 min-w-0">
                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-tight">Filename</p>
-                        <p class="text-sm font-semibold truncate text-gray-700" title="${file.name}">${file.name}</p>
+                        <p class="text-sm font-semibold truncate text-gray-700">${file.name}</p>
                     </div>
                     <div class="flex-1">
                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-tight mb-1">Title</p>
-                        <input type="text" placeholder="Doc Title" required 
-                               class="doc-title w-full p-2 border rounded text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                        <input type="text" placeholder="Doc Title" required value="${file.name.split('.')[0]}"
+                               class="doc-title w-full p-2 border rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white">
                     </div>
                     <div class="w-full md:w-48">
                         <p class="text-[10px] font-bold text-gray-400 uppercase tracking-tight mb-1">Category</p>
                         <select class="doc-category w-full p-2 border rounded text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-white">
-                            ${categoryOptions}
+                            ${categoryOptions || '<option value="">No Categories Found</option>'}
                         </select>
                     </div>
                     <div class="flex items-end pb-1">
-                        <button type="button" class="remove-file text-gray-400 hover:text-red-500 transition px-2" data-index="${index}">
-                            <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path></svg>
-                        </button>
+                        <button type="button" class="remove-file text-gray-400 hover:text-red-500 transition px-2" data-index="${index}">×</button>
                     </div>
                 `;
                 fileList.appendChild(row);
             });
         }
 
-        // Event Listeners
         dropzone.onclick = () => fileInput.click();
-        
         fileInput.onchange = (e) => {
             selectedFiles = [...selectedFiles, ...Array.from(e.target.files)];
             updateFileList();
@@ -113,9 +103,8 @@
         };
 
         fileList.onclick = (e) => {
-            const btn = e.target.closest('.remove-file');
-            if (btn) {
-                const idx = btn.getAttribute('data-index');
+            if (e.target.classList.contains('remove-file')) {
+                const idx = e.target.getAttribute('data-index');
                 selectedFiles.splice(idx, 1);
                 updateFileList();
             }
@@ -127,25 +116,33 @@
 
             const btn = document.getElementById('submitBtn');
             btn.disabled = true;
-            statusMsg.className = "p-4 rounded-lg text-sm font-medium bg-blue-50 text-blue-700";
-            statusMsg.textContent = "Uploading data...";
-            statusMsg.classList.remove('hidden');
+            statusMsg.classList.add('hidden');
 
             const formData = new FormData();
-            
-            selectedFiles.forEach(file => {
-                formData.append('files', file);
-            });
+            selectedFiles.forEach(file => formData.append('files', file));
 
             const titles = Array.from(document.querySelectorAll('.doc-title')).map(el => el.value);
-            const categories = Array.from(document.querySelectorAll('.doc-category')).map(el => parseInt(el.value));
+            const categorySelects = Array.from(document.querySelectorAll('.doc-category'));
             
-            const metadata = titles.map((title, i) => ({
-                title: title,
-                category_id: categories[i]
-            }));
+            const metadata = titles.map((title, i) => {
+                const rawId = categorySelects[i].value;
+                const catId = parseInt(rawId);
+                
+                return {
+                    title: title,
+                    category_id: isNaN(catId) ? null : catId
+                };
+            });
 
-            // Key matches your backend: metadata
+            // Final safety check before sending
+            if (metadata.some(m => m.category_id === null)) {
+                statusMsg.className = "p-4 rounded-lg text-sm font-medium bg-red-100 text-red-700";
+                statusMsg.textContent = "Error: One or more categories are invalid. Ensure categories are loaded.";
+                statusMsg.classList.remove('hidden');
+                btn.disabled = false;
+                return;
+            }
+
             formData.append('metadata_list', JSON.stringify(metadata));
 
             try {
@@ -155,23 +152,25 @@
                 });
 
                 if (res && res.ok) {
-                    statusMsg.className = "p-4 rounded-lg text-sm font-medium bg-green-50 text-green-700";
-                    statusMsg.textContent = "Success! Upload complete. Background processing started.";
+                    statusMsg.className = "p-4 rounded-lg text-sm bg-green-50 text-green-700";
+                    statusMsg.textContent = "Upload successful!";
+                    statusMsg.classList.remove('hidden');
                     selectedFiles = [];
                     updateFileList();
                 } else {
-                    const errData = res ? await res.json() : {};
-                    statusMsg.className = "p-4 rounded-lg text-sm font-medium bg-red-50 text-red-700";
-                    statusMsg.textContent = `Upload failed: ${errData.detail || 'Server error'}`;
+                    const err = await res.json();
+                    statusMsg.className = "p-4 rounded-lg text-sm bg-red-50 text-red-700";
+                    statusMsg.textContent = `Upload failed: ${err.detail || 'Server error'}`;
+                    statusMsg.classList.remove('hidden');
                 }
             } catch (err) {
-                statusMsg.textContent = "Network error. Connection lost.";
+                statusMsg.textContent = "Network error.";
+                statusMsg.classList.remove('hidden');
             } finally {
                 btn.disabled = false;
             }
         };
 
-        // Initialize categories on load
         initCategories();
     </script>
 </body>

@@ -45,6 +45,46 @@ class VectorService:
         return self._report()
 
 
+    def _points_generator(self, documents: Iterator[tuple[str | None, DocumentAdd]]) -> Iterator[models.PointStruct]:
+        for doc, metadata in documents:
+            if doc is None:
+                self._emb_counts.append(0)
+                continue
+
+            chunks = self._construct_chunks(doc)
+            dense_iter = self._dense.query_embed(chunks)
+            sparse_iter = self._sparse.query_embed(chunks)
+            multi_iter = self._multi.query_embed(chunks)
+            self._emb_counts.append(len(chunks))
+
+            for chunk, dense, sparse, multi in zip(chunks, dense_iter, sparse_iter, multi_iter):
+                yield models.PointStruct(
+                    id=uuid7(),
+                    payload = {"group_uid":metadata.group_uid,
+                        "user_uid":metadata.user_uid,
+                        "created_at":metadata.created_at,
+                        "category_id":metadata.category_id,
+                        "doc_id":metadata.id,
+                        "chunk_text":chunk},
+                    vector={
+                        "dense":dense,
+                        "sparse":sparse.as_object(),
+                        "multi":multi
+                    } # type: ignore 
+                )
+            
+            self._documents.append(metadata.title)
+
+    def _construct_chunks(self, doc: str) -> list[str]:
+        splitter = RecursiveCharacterTextSplitter(
+            chunk_size=1000,
+            chunk_overlap=100,
+            separators=["\n\n", "\n", ". ", " ", ""]
+        )
+
+        return splitter.split_text(doc)
+
+
     async def query_db(self, filters: QueryFilters, query: str):
         if not isinstance(self._client, AsyncQdrantClient):
             raise TypeError("Vector Service initialized with QdrantClient instead of AsyncQdrantClient")
@@ -72,6 +112,7 @@ class VectorService:
             limit=10,
             with_payload=True
         )
+
 
         return self._process_retrieved_data(response)
 
@@ -119,7 +160,7 @@ class VectorService:
     def _process_retrieved_data(self, response: QueryResponse) -> list[dict]:
         processed = []
 
-        for i, item in enumerate(response.points or [], 1):
+        for i, item in enumerate(response.points or []):
             payload = item.payload
             if payload is None: continue
             processed.append({
@@ -127,51 +168,12 @@ class VectorService:
                 "contents": payload["chunk_text"],
                 "created_at":payload["created_at"],
                 "category_id":payload["category_id"],
-                "owner_uid":payload["user_uid"]
+                "owner_uid":payload["user_uid"],
             })
         
         return processed
 
-    def _points_generator(self, documents: Iterator[tuple[str | None, DocumentAdd]]) -> Iterator[models.PointStruct]:
-        for doc, metadata in documents:
-            if doc is None:
-                self._emb_counts.append(0)
-                continue
-
-            chunks = self._construct_chunks(doc)
-            dense_iter = self._dense.query_embed(chunks)
-            sparse_iter = self._sparse.query_embed(chunks)
-            multi_iter = self._multi.query_embed(chunks)
-            self._emb_counts.append(len(chunks))
-
-            for chunk, dense, sparse, multi in zip(chunks, dense_iter, sparse_iter, multi_iter):
-                yield models.PointStruct(
-                    id=uuid7(),
-                    payload = {"group_uid":metadata.group_uid,
-                        "user_uid":metadata.user_uid,
-                        "created_at":metadata.created_at,
-                        "category_id":metadata.category_id,
-                        "doc_id":metadata.id,
-                        "chunk_text":chunk},
-                    vector={
-                        "dense":dense,
-                        "sparse":sparse.as_object(),
-                        "multi":multi
-                    } # type: ignore 
-                )
-            
-            self._documents.append(metadata.title)
-
-    def _construct_chunks(self, doc: str) -> list[str]:
-        splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,
-            chunk_overlap=100,
-            separators=["\n\n", "\n", ". ", " ", ""]
-        )
-
-        return splitter.split_text(doc)
     
-
     def _report(self) -> tuple[list[int | None], list[int | None]]:
         return self._documents, self._emb_counts
 

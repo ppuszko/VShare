@@ -37,4 +37,6 @@ class CacheManager:
         return categories
     
     async def set_cached_categories(self, group_uid: str, categories: dict):
+        to_delete = [key for _, key in (await self.get_cached_categories(group_uid)).items()]
+        await self._redis.hdel(f"categories:{group_uid}", *to_delete) # type: ignore[reportGeneralTypeIssues]
         await self._redis.hset(f"categories:{group_uid}", mapping=categories) # type: ignore[reportGeneralTypeIssues]

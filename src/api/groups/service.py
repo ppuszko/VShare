@@ -51,9 +51,9 @@ class GroupService:
         group_categories = (await self._session.exec(select(Category).where(Category.group_uid == group_uid))).all()
         default_categories = (await self._session.exec(select(Category).where(Category.group_uid == None))).all()
         
-        categories = {cat.name : cat.id for cat in group_categories}
+        categories = {cat.id : cat.name for cat in group_categories}
         categories.update(
-            {cat.name : cat.id for cat in default_categories}
+            {cat.id : cat.name for cat in default_categories}
         )
 
         return categories

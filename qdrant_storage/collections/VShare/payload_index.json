@@ -1,1 +1,1 @@
-{"schema":{"user_uid":"uuid","created_at":"datetime","group_uid":{"type":"keyword","is_tenant":true},"category_id":"integer"}}
+{"schema":{"group_uid":{"type":"keyword","is_tenant":true},"category_id":"integer","created_at":"datetime","user_uid":"uuid"}}

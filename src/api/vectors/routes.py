@@ -31,8 +31,9 @@ async def upload_data(files: list[UploadFile] = File(...),
                       cache_manager: CacheManager = Depends(get_cache_manager),
                       file_man: FileManager = Depends(get_file_man)):
     
+    print(f"RAW METADATA STRING: {metadata_list}")
     metadata = TypeAdapter(list[DocumentAdd]).validate_json(metadata_list)
-
+    print(f"PARSED METADATA OBJECTS: {metadata}")
 
     if len(files) != len(metadata):
         raise Exception("Amount of files doesn't match amount of associated metadata!")
@@ -44,8 +45,6 @@ async def upload_data(files: list[UploadFile] = File(...),
         user_service = UserService(uow)
         files_to_embed = await user_service.add_documents(documents, metadata, user)
         
-        
-
         tokenizer = URLTokenizer(TokenType.EMBEDDING_REPORT)
         user_data = {"user_uid": str(user.uid),
                     "user_email": user.email,
@@ -58,7 +57,8 @@ async def upload_data(files: list[UploadFile] = File(...),
 
     files_to_embed_dicts = [file.model_dump(mode="json") for file in files_to_embed]
     compute_and_insert_embeddings.delay(files_to_embed_dicts, url)
-        
+
+
     
 @vector_router.post("/embedding-report/{ticket}")
 async def embedding_report(ticket: str, body: dict, 
@@ -78,11 +78,16 @@ async def embedding_report(ticket: str, body: dict,
 
 
 @vector_router.get("/search")
-async def search(query: str, query_filters: QueryFilters, 
+async def search(query: str, query_filters: str, 
                  user: UserGet = Security(RoleChecker(["USER", "ADMIN"])), 
                  vector_service: VectorService = Depends(get_querying_vector_service)):
-
-    res = await vector_service.query_db(query_filters, query)
+    filters = QueryFilters.model_validate_json(query_filters)
+    filters.group_uid = user.group.uid
+    if filters.only_my_articles:
+        filters.user_uid = user.uid
+    
+    res = await vector_service.query_db(filters, query)
+    return res
 
 
 @vector_router.get("/fetch-categories")
@@ -91,11 +96,12 @@ async def fetch_group_categories(curr_user: UserGet = Security(RoleChecker(["ADM
                                  cache_man: CacheManager = Depends(get_cache_manager)):
     group_uid = str(curr_user.group.uid)
     group_categories = await cache_man.get_cached_categories(group_uid)
-    if not bool(group_categories):
-        async with uow:
-            group_service = GroupService(uow)
-            group_categories = await group_service.get_group_categories(group_uid)
 
-        await cache_man.set_cached_categories(group_uid, group_categories) 
+    #if not bool(group_categories):
+    async with uow:
+        group_service = GroupService(uow)
+        group_categories = await group_service.get_group_categories(group_uid)
+
+    await cache_man.set_cached_categories(group_uid, group_categories) 
 
     return group_categories

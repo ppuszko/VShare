@@ -1,5 +1,184 @@
-<body class="bg-gray-100 flex justify-center items-center h-screen">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Search Knowledge Base</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* UI improvement for multi-select */
+        select[multiple] {
+            height: 100px !important;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 p-6 md:p-12">
+    <div class="max-w-5xl mx-auto">
+        
+        <div class="mb-10 flex items-center justify-between">
+            <div>
+                <h1 class="text-4xl font-extrabold text-gray-900 mb-2">Search Intelligence</h1>
+                <p class="text-gray-500">Query your vectorized documents with semantic filters.</p>
+            </div>
+            <button onclick="loadView('home.html')" class="text-blue-600 hover:underline">← Back</button>
+        </div>
 
-    <h1>Hello</h1>
+        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
+            <div class="flex flex-col gap-6">
+                
+                <div class="relative">
+                    <input type="text" id="searchInput" placeholder="Ask a question or enter keywords..." 
+                           class="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-lg transition">
+                    <svg class="w-6 h-6 text-gray-400 absolute left-4 top-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </div>
 
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
+                    
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-2 tracking-wider">Time Frame</label>
+                        <div class="space-y-2">
+                            <input type="date" id="dateStart" class="w-full p-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" title="Start Date">
+                            <input type="date" id="dateEnd" class="w-full p-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" title="End Date">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-gray-400 uppercase mb-2 tracking-wider">Categories (Multi-select)</label>
+                        <select id="categorySelect" multiple class="w-full p-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 overflow-y-auto">
+                            </select>
+                        <p class="text-[10px] text-gray-400 mt-1 italic">Cmd/Ctrl + Click to select multiple</p>
+                    </div>
+
+                    <div class="flex flex-col justify-between h-full min-h-[100px]">
+                        <label class="inline-flex items-center cursor-pointer mt-2">
+                            <input type="checkbox" id="onlyMyArticles" class="sr-only peer">
+                            <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                            <span class="ms-3 text-sm font-medium text-gray-600">Only My Articles</span>
+                        </label>
+                        
+                        <button id="searchBtn" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-100 mt-4">
+                            Search
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="resultsList" class="space-y-4">
+            <div class="text-center py-20 text-gray-400 italic">Enter a query to search.</div>
+        </div>
+
+        <div id="loader" class="hidden py-10 text-center">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
+            <p class="text-gray-500 mt-2 text-sm">Searching vector space...</p>
+        </div>
+    </div>
+
+    <script type="module">
+        import { apiRequest } from './api.js';
+
+        const resultsList = document.getElementById('resultsList');
+        const loader = document.getElementById('loader');
+        const categorySelect = document.getElementById('categorySelect');
+        
+        let categoryMap = {}; 
+
+        async function loadCategories() {
+            const res = await apiRequest("/fetch-categories");
+            if (res && res.ok) {
+                // Backend returns { "Category Name": ID } or { "ID": "Name" }
+                // Based on your last update: id (int) : name (str)
+                categoryMap = await res.json();
+                Object.entries(categoryMap).forEach(([id, name]) => {
+                    const opt = document.createElement('option');
+                    opt.value = id;
+                    opt.textContent = name;
+                    categorySelect.appendChild(opt);
+                });
+            }
+        }
+
+        async function performSearch() {
+            const query = document.getElementById('searchInput').value;
+            if (!query) return;
+
+            resultsList.innerHTML = '';
+            loader.classList.remove('hidden');
+
+            const dateStart = document.getElementById('dateStart').value;
+            const dateEnd = document.getElementById('dateEnd').value;
+            const onlyMyArticles = document.getElementById('onlyMyArticles').checked;
+            
+            // Get selected categories - filter out any NaN/Null values
+            const selectedCategories = Array.from(categorySelect.selectedOptions)
+                .map(opt => parseInt(opt.value))
+                .filter(val => !isNaN(val));
+
+            const queryFilters = {
+                time_frame: [
+                    dateStart ? new Date(dateStart).toISOString() : null,
+                    dateEnd ? new Date(dateEnd).toISOString() : null
+                ],
+                // CRITICAL: Ensure we send null if empty, not [null] or [NaN]
+                category_id: selectedCategories.length > 0 ? selectedCategories : null,
+                only_my_articles: onlyMyArticles 
+            };
+
+            const params = new URLSearchParams({
+                query: query,
+                query_filters: JSON.stringify(queryFilters)
+            });
+
+            try {
+                const res = await apiRequest(`/search?${params.toString()}`);
+                loader.classList.add('hidden');
+
+                if (res && res.ok) {
+                    const data = await res.json();
+                    renderResults(data);
+                } else {
+                    const err = await res.json();
+                    resultsList.innerHTML = `<p class="text-red-500 text-center">Error: ${err.detail[0]?.msg || 'Search failed'}</p>`;
+                }
+            } catch (err) {
+                loader.classList.add('hidden');
+                resultsList.innerHTML = `<p class="text-red-500 text-center">Network error.</p>`;
+            }
+        }
+
+        function renderResults(results) {
+            if (results.length === 0) {
+                resultsList.innerHTML = `<div class="text-center py-20 bg-white rounded-xl border border-dashed text-gray-400">No matching fragments found.</div>`;
+                return;
+            }
+
+            results.forEach(item => {
+                // Ensure key exists. categoryMap keys might be strings even if values were ints
+                const catName = categoryMap[item.category_id] || categoryMap[String(item.category_id)] || "Uncategorized";
+                const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString() : "No Date";
+                
+                const card = document.createElement('div');
+                card.className = "bg-white p-6 rounded-xl border border-gray-100 shadow-sm hover:border-blue-300 transition-all duration-300";
+                card.innerHTML = `
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="flex items-center gap-2">
+                             <span class="px-2 py-0.5 bg-gray-100 text-gray-500 text-[10px] font-bold rounded">CHUNK ${item.rank + 1}</span>
+                             <span class="text-[10px] font-bold text-blue-500 uppercase">${catName}</span>
+                        </div>
+                        <span class="text-[10px] font-medium text-gray-400">${dateStr}</span>
+                    </div>
+                    <p class="text-gray-700 leading-relaxed text-sm whitespace-pre-wrap">${item.contents}</p>
+                `;
+                resultsList.appendChild(card);
+            });
+        }
+
+        document.getElementById('searchBtn').onclick = performSearch;
+        document.getElementById('searchInput').onkeypress = (e) => { if(e.key === 'Enter') performSearch(); };
+
+        loadCategories();
+    </script>
 </body>
+</html>
