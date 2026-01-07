@@ -1,3 +1,5 @@
+from pathlib import Path
+
 from sqlalchemy import select
 
 from src.core.db.unit_of_work import UnitOfWork
@@ -18,15 +20,15 @@ class DocumentService:
         saved_docs = []
         doc_count = 0
 
-        for file, meta in zip(documents, documents_metadata):
-            if file is not None:
+        for file_path, meta in zip(documents, documents_metadata):
+            if file_path is not None:
                 doc_count += 1
                 
                 meta.group_uid = user.group.uid
                 meta.user_uid = user.uid
-                meta.storage_path = file
+                file_name = Path(file_path).name
 
-                db_doc = Document(**(meta.model_dump()))
+                db_doc = Document(**(meta.model_dump()), file_name=file_name)
                 self._session.add(db_doc)
 
                 saved_docs.append(db_doc)
@@ -35,7 +37,7 @@ class DocumentService:
 
         if doc_count != 0:
             await self._session.flush()
-        return [DocumentAdd(**(doc.model_dump())) for doc in saved_docs], doc_count
+        return [DocumentAdd(**(doc.model_dump()), storage_path=file_path) for doc in saved_docs], doc_count
 
 
     async def extend_document_metadata(self, documents: list[dict]) -> list[dict]:
@@ -45,7 +47,7 @@ class DocumentService:
         if not result:
             raise NotFoundError
         
-        docs_from_db = {item.id : {"title": item.title, "storage_path": item.storage_path} for item in result} 
+        docs_from_db = {item.id : {"title": item.title, "file_name": item.file_name} for item in result} 
         
         for i, doc in enumerate(documents):
             doc_id = doc["doc_id"]

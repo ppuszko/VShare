@@ -73,7 +73,7 @@ class Document(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     group_uid: uuid.UUID = Field(foreign_key="groups.uid")
     user_uid: uuid.UUID = Field(foreign_key="users.uid")
-    storage_path: str = Field(nullable=False)
+    file_name: str = Field(nullable=False)
     title: str = Field(nullable=False)
     category_id: int | None = Field(foreign_key="categories.id", nullable=False)
     created_at: datetime = Field(sa_column=Column(
