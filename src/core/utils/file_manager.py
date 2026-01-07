@@ -10,7 +10,7 @@ from docx import Document
 from fastapi import UploadFile
 from uuid6 import uuid7
 
-from src.api.vectors.schemas import DocumentAdd
+from src.api.documents.schemas import DocumentAdd
 from src.core.config.file import FileConfig
 
 

@@ -1,5 +1,6 @@
 from collections.abc import Iterator
 import asyncio
+from datetime import datetime
 
 from fastapi import Depends
 from qdrant_client import models, AsyncQdrantClient, QdrantClient
@@ -9,7 +10,8 @@ from langchain_text_splitters import RecursiveCharacterTextSplitter
 from numpy import ndarray
 from uuid6 import uuid7
 
-from src.api.vectors.schemas import  DocumentAdd, QueryFilters
+from src.api.vectors.schemas import QueryFilters
+from src.api.documents.schemas import DocumentAdd
 from src.api.vectors.main import get_querying_client_components
 from src.core.config.vector import VectorConfig
 
@@ -118,6 +120,7 @@ class VectorService:
 
 
     def _build_filter(self, filters: QueryFilters) -> models.Filter:
+            
         field_conditions: list[models.Condition] = [
             models.FieldCondition(
                 key="group_uid",
@@ -127,9 +130,8 @@ class VectorService:
                 key="created_at",
                 range=models.DatetimeRange(
                     gte=filters.time_frame[0],
-                    lte=filters.time_frame[1])
-            ),
-            ]
+                    lte=filters.time_frame[1] if filters.time_frame[1] else datetime.now())
+            ),]
 
         if filters.category_id is not None:
             field_conditions.append(models.FieldCondition(
@@ -160,17 +162,14 @@ class VectorService:
     def _process_retrieved_data(self, response: QueryResponse) -> list[dict]:
         processed = []
 
-        for i, item in enumerate(response.points or []):
+        for i, item in enumerate(response.points or [], 1):
             payload = item.payload
-            if payload is None: continue
-            processed.append({
-                "rank":i,
-                "contents": payload["chunk_text"],
-                "created_at":payload["created_at"],
-                "category_id":payload["category_id"],
-                "owner_uid":payload["user_uid"],
-            })
-        
+
+            if payload is not None:
+                payload_dict = dict(payload.items())
+                payload_dict["rank"] = i
+                processed.append(payload_dict)
+
         return processed
 
     

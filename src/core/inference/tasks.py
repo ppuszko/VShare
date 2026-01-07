@@ -8,7 +8,7 @@ from src.core.inference.celery import app
 import src.core.inference.celery as global_store
 from src.api.vectors.main import init_client, load_dense_model, load_sparse_model, load_multivector_model
 from src.api.vectors.service import VectorService
-from src.api.vectors.schemas import DocumentAdd
+from src.api.documents.schemas import DocumentAdd
 from src.core.utils.file_manager import get_file_man
 
 

@@ -3,11 +3,13 @@ from pydantic import TypeAdapter
 from fastapi import APIRouter, Depends, UploadFile, Security, Form, File
 from fastapi import BackgroundTasks
 
+from src.api.documents.service import DocumentService
+from src.api.documents.schemas import DocumentAdd
 from src.api.users.service import UserService
 from src.api.groups.service import GroupService
 from src.core.db.unit_of_work import UnitOfWork, get_uow
 from src.api.users.schemas import UserGet
-from src.api.vectors.schemas import QueryFilters, DocumentAdd
+from src.api.vectors.schemas import QueryFilters
 from src.api.vectors.service import VectorService, get_querying_vector_service
 from src.core.inference.tasks import compute_and_insert_embeddings
 
@@ -18,6 +20,7 @@ from src.core.utils.url_tokenizer import URLTokenizer, TokenType
 
 from src.auth.dependencies import RoleChecker
 
+from src.errors.exceptions import BadRequest
 
 
 vector_router = APIRouter()
@@ -31,20 +34,20 @@ async def upload_data(files: list[UploadFile] = File(...),
                       cache_manager: CacheManager = Depends(get_cache_manager),
                       file_man: FileManager = Depends(get_file_man)):
     
-    print(f"RAW METADATA STRING: {metadata_list}")
     metadata = TypeAdapter(list[DocumentAdd]).validate_json(metadata_list)
-    print(f"PARSED METADATA OBJECTS: {metadata}")
 
     if len(files) != len(metadata):
-        raise Exception("Amount of files doesn't match amount of associated metadata!")
+        raise BadRequest("Amount of files doesn't match amount of associated metadata!")
 
     group_uid = str(user.group.uid)
     documents = [file_man.save_file(file, group_uid) for file in files]
 
     async with uow:
         user_service = UserService(uow)
-        files_to_embed = await user_service.add_documents(documents, metadata, user)
-        
+        doc_service = DocumentService(uow)
+        files_to_embed, doc_count = await doc_service.add_documents(documents, metadata, user)
+        await user_service.update_doc_count(doc_count, str(user.uid))
+
         tokenizer = URLTokenizer(TokenType.EMBEDDING_REPORT)
         user_data = {"user_uid": str(user.uid),
                     "user_email": user.email,
@@ -80,14 +83,21 @@ async def embedding_report(ticket: str, body: dict,
 @vector_router.get("/search")
 async def search(query: str, query_filters: str, 
                  user: UserGet = Security(RoleChecker(["USER", "ADMIN"])), 
-                 vector_service: VectorService = Depends(get_querying_vector_service)):
+                 vector_service: VectorService = Depends(get_querying_vector_service),
+                 uow: UnitOfWork = Depends(get_uow)):
+    
     filters = QueryFilters.model_validate_json(query_filters)
     filters.group_uid = user.group.uid
     if filters.only_my_articles:
-        filters.user_uid = user.uid
-    
-    res = await vector_service.query_db(filters, query)
-    return res
+                filters.user_uid = user.uid
+
+    query_res = await vector_service.query_db(filters, query)
+    async with uow:
+        doc_service = DocumentService(uow)
+        
+        query_res = await doc_service.extend_document_metadata(query_res)
+
+    return query_res
 
 
 @vector_router.get("/fetch-categories")
@@ -97,11 +107,11 @@ async def fetch_group_categories(curr_user: UserGet = Security(RoleChecker(["ADM
     group_uid = str(curr_user.group.uid)
     group_categories = await cache_man.get_cached_categories(group_uid)
 
-    #if not bool(group_categories):
-    async with uow:
-        group_service = GroupService(uow)
-        group_categories = await group_service.get_group_categories(group_uid)
+    if not bool(group_categories):
+        async with uow:
+            group_service = GroupService(uow)
+            group_categories = await group_service.get_group_categories(group_uid)
 
-    await cache_man.set_cached_categories(group_uid, group_categories) 
+        await cache_man.set_cached_categories(group_uid, group_categories) 
 
     return group_categories

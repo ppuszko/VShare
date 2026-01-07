@@ -6,74 +6,86 @@
     <title>Search Knowledge Base</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        /* UI improvement for multi-select */
-        select[multiple] {
-            height: 100px !important;
-        }
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #888; border-radius: 10px; }
+        .category-pill.active { background-color: #3b82f6; color: white; border-color: #3b82f6; }
     </style>
 </head>
-<body class="bg-gray-50 p-6 md:p-12">
-    <div class="max-w-5xl mx-auto">
-        
-        <div class="mb-10 flex items-center justify-between">
-            <div>
-                <h1 class="text-4xl font-extrabold text-gray-900 mb-2">Search Intelligence</h1>
-                <p class="text-gray-500">Query your vectorized documents with semantic filters.</p>
-            </div>
-            <button onclick="loadView('home.html')" class="text-blue-600 hover:underline">← Back</button>
-        </div>
+<body class="bg-gray-50 h-screen overflow-hidden flex flex-col">
 
-        <div class="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mb-8">
-            <div class="flex flex-col gap-6">
-                
-                <div class="relative">
-                    <input type="text" id="searchInput" placeholder="Ask a question or enter keywords..." 
-                           class="w-full pl-12 pr-4 py-4 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500 text-lg transition">
-                    <svg class="w-6 h-6 text-gray-400 absolute left-4 top-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <header class="bg-white border-b border-gray-200 px-8 py-4 flex items-center justify-between z-10">
+        <div class="flex items-center gap-4">
+            <h1 class="text-xl font-bold text-gray-900 tracking-tight">Intelligence <span class="text-blue-600">Search</span></h1>
+        </div>
+        <button onclick="loadView('home.html')" class="text-sm font-medium text-gray-500 hover:text-blue-600 transition">← Back to Dashboard</button>
+    </header>
+
+    <div class="flex flex-1 overflow-hidden">
+        
+        <aside class="w-72 bg-white border-r border-gray-200 p-6 flex flex-col gap-8 overflow-y-auto custom-scrollbar">
+            
+            <div>
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Time Frame</h3>
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-[10px] text-gray-500 block mb-1">From</label>
+                        <input type="date" id="dateStart" class="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div>
+                        <label class="text-[10px] text-gray-500 block mb-1">To</label>
+                        <input type="date" id="dateEnd" class="w-full p-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Categories</h3>
+                <div id="categoryContainer" class="flex flex-wrap gap-2">
+                    <p class="text-xs text-gray-400 italic">Loading categories...</p>
+                </div>
+            </div>
+
+            <div>
+                <h3 class="text-xs font-bold text-gray-400 uppercase tracking-widest mb-4">Preferences</h3>
+                <label class="flex items-center cursor-pointer group">
+                    <input type="checkbox" id="onlyMyArticles" class="sr-only peer">
+                    <div class="relative w-10 h-5 bg-gray-200 rounded-full peer peer-checked:bg-blue-600 transition-colors after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
+                    <span class="ml-3 text-sm text-gray-600 group-hover:text-gray-900 transition">My Articles Only</span>
+                </label>
+            </div>
+
+            <button id="searchBtn" class="mt-auto w-full bg-blue-600 text-white py-3 rounded-xl font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-100">
+                Update Search
+            </button>
+        </aside>
+
+        <main class="flex-1 flex flex-col bg-gray-50 overflow-hidden">
+            
+            <div class="p-8 bg-white border-b border-gray-100">
+                <div class="max-w-4xl mx-auto relative">
+                    <input type="text" id="searchInput" placeholder="Ask your data anything..." 
+                           class="w-full pl-14 pr-4 py-4 bg-gray-50 border border-transparent rounded-2xl outline-none focus:bg-white focus:ring-4 focus:ring-blue-50/50 focus:border-blue-200 text-lg transition shadow-inner">
+                    <svg class="w-6 h-6 text-gray-400 absolute left-5 top-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                     </svg>
                 </div>
+            </div>
 
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-start">
-                    
-                    <div>
-                        <label class="block text-xs font-bold text-gray-400 uppercase mb-2 tracking-wider">Time Frame</label>
-                        <div class="space-y-2">
-                            <input type="date" id="dateStart" class="w-full p-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" title="Start Date">
-                            <input type="date" id="dateEnd" class="w-full p-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50" title="End Date">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-gray-400 uppercase mb-2 tracking-wider">Categories (Multi-select)</label>
-                        <select id="categorySelect" multiple class="w-full p-2 border border-gray-200 rounded-lg text-sm outline-none focus:ring-2 focus:ring-blue-500 bg-gray-50 overflow-y-auto">
-                            </select>
-                        <p class="text-[10px] text-gray-400 mt-1 italic">Cmd/Ctrl + Click to select multiple</p>
-                    </div>
-
-                    <div class="flex flex-col justify-between h-full min-h-[100px]">
-                        <label class="inline-flex items-center cursor-pointer mt-2">
-                            <input type="checkbox" id="onlyMyArticles" class="sr-only peer">
-                            <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                            <span class="ms-3 text-sm font-medium text-gray-600">Only My Articles</span>
-                        </label>
-                        
-                        <button id="searchBtn" class="w-full bg-blue-600 text-white py-3 rounded-lg font-bold hover:bg-blue-700 transition shadow-lg shadow-blue-100 mt-4">
-                            Search
-                        </button>
+            <div id="resultsWrapper" class="flex-1 overflow-y-auto p-8 custom-scrollbar">
+                <div id="resultsList" class="max-w-4xl mx-auto space-y-6">
+                    <div class="text-center py-20 text-gray-400">
+                        <svg class="w-16 h-16 mx-auto mb-4 opacity-20" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18 18.247 18.477 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
+                        <p class="italic text-lg">Your intelligence is ready. Just type a query.</p>
                     </div>
                 </div>
+
+                <div id="loader" class="hidden py-10 text-center">
+                    <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
+                    <p class="text-gray-500 mt-4 font-medium">Scanning vector embeddings...</p>
+                </div>
             </div>
-        </div>
-
-        <div id="resultsList" class="space-y-4">
-            <div class="text-center py-20 text-gray-400 italic">Enter a query to search.</div>
-        </div>
-
-        <div id="loader" class="hidden py-10 text-center">
-            <div class="inline-block animate-spin rounded-full h-8 w-8 border-4 border-blue-600 border-t-transparent"></div>
-            <p class="text-gray-500 mt-2 text-sm">Searching vector space...</p>
-        </div>
+        </main>
     </div>
 
     <script type="module">
@@ -81,21 +93,30 @@
 
         const resultsList = document.getElementById('resultsList');
         const loader = document.getElementById('loader');
-        const categorySelect = document.getElementById('categorySelect');
+        const categoryContainer = document.getElementById('categoryContainer');
         
         let categoryMap = {}; 
+        let selectedCategories = new Set();
 
         async function loadCategories() {
             const res = await apiRequest("/fetch-categories");
             if (res && res.ok) {
-                // Backend returns { "Category Name": ID } or { "ID": "Name" }
-                // Based on your last update: id (int) : name (str)
                 categoryMap = await res.json();
+                categoryContainer.innerHTML = '';
                 Object.entries(categoryMap).forEach(([id, name]) => {
-                    const opt = document.createElement('option');
-                    opt.value = id;
-                    opt.textContent = name;
-                    categorySelect.appendChild(opt);
+                    const pill = document.createElement('button');
+                    pill.className = "category-pill px-3 py-1.5 border border-gray-200 rounded-full text-xs font-medium text-gray-600 hover:border-blue-300 hover:bg-blue-50 transition";
+                    pill.textContent = name;
+                    pill.onclick = () => {
+                        if (selectedCategories.has(id)) {
+                            selectedCategories.delete(id);
+                            pill.classList.remove('active');
+                        } else {
+                            selectedCategories.add(id);
+                            pill.classList.add('active');
+                        }
+                    };
+                    categoryContainer.appendChild(pill);
                 });
             }
         }
@@ -107,23 +128,13 @@
             resultsList.innerHTML = '';
             loader.classList.remove('hidden');
 
-            const dateStart = document.getElementById('dateStart').value;
-            const dateEnd = document.getElementById('dateEnd').value;
-            const onlyMyArticles = document.getElementById('onlyMyArticles').checked;
-            
-            // Get selected categories - filter out any NaN/Null values
-            const selectedCategories = Array.from(categorySelect.selectedOptions)
-                .map(opt => parseInt(opt.value))
-                .filter(val => !isNaN(val));
-
             const queryFilters = {
                 time_frame: [
-                    dateStart ? new Date(dateStart).toISOString() : null,
-                    dateEnd ? new Date(dateEnd).toISOString() : null
+                    document.getElementById('dateStart').value || null,
+                    document.getElementById('dateEnd').value || null
                 ],
-                // CRITICAL: Ensure we send null if empty, not [null] or [NaN]
-                category_id: selectedCategories.length > 0 ? selectedCategories : null,
-                only_my_articles: onlyMyArticles 
+                category_id: selectedCategories.size > 0 ? Array.from(selectedCategories).map(Number) : null,
+                only_my_articles: document.getElementById('onlyMyArticles').checked 
             };
 
             const params = new URLSearchParams({
@@ -134,42 +145,50 @@
             try {
                 const res = await apiRequest(`/search?${params.toString()}`);
                 loader.classList.add('hidden');
-
                 if (res && res.ok) {
                     const data = await res.json();
                     renderResults(data);
-                } else {
-                    const err = await res.json();
-                    resultsList.innerHTML = `<p class="text-red-500 text-center">Error: ${err.detail[0]?.msg || 'Search failed'}</p>`;
                 }
             } catch (err) {
                 loader.classList.add('hidden');
-                resultsList.innerHTML = `<p class="text-red-500 text-center">Network error.</p>`;
+                resultsList.innerHTML = `<p class="text-red-500 text-center">Search failed.</p>`;
             }
         }
 
         function renderResults(results) {
             if (results.length === 0) {
-                resultsList.innerHTML = `<div class="text-center py-20 bg-white rounded-xl border border-dashed text-gray-400">No matching fragments found.</div>`;
+                resultsList.innerHTML = `<div class="text-center py-20 bg-white rounded-2xl border border-dashed text-gray-400">No matching documents found.</div>`;
                 return;
             }
 
             results.forEach(item => {
-                // Ensure key exists. categoryMap keys might be strings even if values were ints
-                const catName = categoryMap[item.category_id] || categoryMap[String(item.category_id)] || "Uncategorized";
-                const dateStr = item.created_at ? new Date(item.created_at).toLocaleDateString() : "No Date";
+                const catName = categoryMap[item.category_id] || "General";
+                const date = new Date(item.created_at).toLocaleDateString();
                 
                 const card = document.createElement('div');
-                card.className = "bg-white p-6 rounded-xl border border-gray-100 shadow-sm hover:border-blue-300 transition-all duration-300";
+                card.className = "group bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md hover:border-blue-100 transition-all p-6";
                 card.innerHTML = `
-                    <div class="flex justify-between items-start mb-4">
-                        <div class="flex items-center gap-2">
-                             <span class="px-2 py-0.5 bg-gray-100 text-gray-500 text-[10px] font-bold rounded">CHUNK ${item.rank + 1}</span>
-                             <span class="text-[10px] font-bold text-blue-500 uppercase">${catName}</span>
+                    <div class="flex flex-col gap-4">
+                        <div class="flex items-start justify-between">
+                            <div class="space-y-1">
+                                <div class="flex items-center gap-3">
+                                    <span class="text-[10px] font-black bg-blue-600 text-white px-2 py-0.5 rounded italic">RANK ${item.rank}</span>
+                                    <span class="text-xs font-bold text-blue-500 uppercase tracking-tighter">${catName}</span>
+                                </div>
+                                <h2 class="text-lg font-bold text-gray-900 group-hover:text-blue-600 transition">${item.title || 'Untitled Document'}</h2>
+                                <p class="text-xs text-gray-400">${date}</p>
+                            </div>
+                            <div class="flex gap-2">
+                                <button onclick="window.open('/download/${item.owner_uid}/${item.title}', '_blank')" 
+                                        class="p-2 text-gray-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition" title="View/Download">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
+                                </button>
+                            </div>
                         </div>
-                        <span class="text-[10px] font-medium text-gray-400">${dateStr}</span>
+                        <div class="bg-gray-50 rounded-xl p-4 border border-gray-100">
+                            <p class="text-gray-600 text-sm leading-relaxed italic">"...${item.chunk_text}..."</p>
+                        </div>
                     </div>
-                    <p class="text-gray-700 leading-relaxed text-sm whitespace-pre-wrap">${item.contents}</p>
                 `;
                 resultsList.appendChild(card);
             });
@@ -177,7 +196,6 @@
 
         document.getElementById('searchBtn').onclick = performSearch;
         document.getElementById('searchInput').onkeypress = (e) => { if(e.key === 'Enter') performSearch(); };
-
         loadCategories();
     </script>
 </body>

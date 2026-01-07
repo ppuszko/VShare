@@ -10,12 +10,3 @@ class QueryFilters(BaseModel):
     only_my_articles: bool = False
 
 
-class DocumentAdd(BaseModel):
-    id: int | None = None
-    group_uid: UUID | None = None 
-    user_uid: UUID | None = None
-    storage_path: str | None = None
-    created_at: datetime | None = None
-    title: str 
-    category_id: int | None
-
