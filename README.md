@@ -4,11 +4,11 @@ A specialized document management system designed for secure, group-isolated dat
 # System Architecture
 The system is split into three main components:
 
-##### FastAPI Backend: Handles user authentication, group-based permission logic (Multi-tenancy), and provides endpoints for document metadata management and search.
+FastAPI Backend: Handles user authentication, group-based permission logic (Multi-tenancy), and provides endpoints for document metadata management and search.
 
-##### Hybrid Search Engine: Combines traditional metadata filtering (categories, timeframes) with dense and sparse search to capture both semantic meaning and specific keywords. Seaerching is pefromed on quantized dense vectors for high efficiency. Resulting pool of fetched data is then reranked with multi-vectors to provde highest data accuracy.
+Hybrid Search Engine: Combines traditional metadata filtering (categories, timeframes) with dense and sparse search to capture both semantic meaning and specific keywords. Seaerching is pefromed on quantized dense vectors for high efficiency. Resulting pool of fetched data is then reranked with multi-vectors to provde highest data accuracy.
 
-##### Asynchronous Worker: A dedicated worker process that handles document parsing and embedding generation with work report sent via e-mail.
+Asynchronous Worker: A dedicated worker process that handles document parsing and embedding generation with work report sent via e-mail.
 
 # Multi-Tenancy & Security
 The system is built from the ground up to support Group Isolation:
