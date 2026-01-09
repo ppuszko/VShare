@@ -1,149 +1,256 @@
 <!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>My Account</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-</head>
-<body class="bg-gray-50 p-10">
-    <div class="max-w-6xl mx-auto">
-        
-        <div class="flex justify-between items-center mb-10">
-            <h1 class="text-3xl font-bold text-gray-800">Account Dashboard</h1>
-            <button id="logoutBtn" class="bg-white border border-gray-300 hover:bg-red-50 hover:text-red-600 text-gray-600 px-4 py-2 rounded-lg transition font-medium">
-                Log Out
-            </button>
-        </div>
 
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-            
-            <div class="md:col-span-2 bg-white p-8 rounded-xl shadow-sm border border-gray-100 h-fit">
-                <h2 class="text-2xl font-bold mb-6 text-gray-800">Account Details</h2>
+<html lang="en"> <head> <meta charset="UTF-8"> <meta name="viewport" content="width=device-width, initial-scale=1.0"> <title>My Account</title> <script src="https://cdn.tailwindcss.com"></script> <style> @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap'); body { font-family: 'Inter', sans-serif; } .glass-card { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(10px); } .animate-float { animation: float 6s ease-in-out infinite; } @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } } </style> </head> <body class="bg-[#f8fafc] min-h-screen"> <div class="max-w-7xl mx-auto px-4 py-8 md:py-12">
+
+    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-12">
+        <div>
+            <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight">Account <span class="text-blue-600">Dashboard</span></h1>
+            <p class="text-slate-500 mt-1">Manage your profile, categories, and group permissions.</p>
+        </div>
+        <button id="logoutBtn" class="flex items-center gap-2 bg-white border border-slate-200 text-slate-600 px-5 py-2.5 rounded-xl transition-all hover:bg-red-50 hover:text-red-600 hover:border-red-100 font-semibold shadow-sm">
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+            Log Out
+        </button>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <div class="lg:col-span-8 space-y-8">
+            <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100 relative overflow-hidden">
+                <div class="absolute top-0 right-0 p-8 opacity-5">
+                    <svg class="w-32 h-32 text-blue-600" fill="currentColor" viewBox="0 0 24 24"><path d="M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z"></path></svg>
+                </div>
+                <h2 class="text-xl font-bold mb-8 text-slate-800 flex items-center gap-2">
+                    <span class="w-2 h-6 bg-blue-600 rounded-full"></span>
+                    Profile Information
+                </h2>
                 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
-                    <div>
-                        <p class="text-sm text-gray-400 uppercase font-bold tracking-wider">Username</p>
-                        <p id="disp-username" class="text-xl font-semibold text-gray-900">-</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-y-10 gap-x-12 relative z-10">
+                    <div class="group">
+                        <p class="text-[11px] text-slate-400 uppercase font-black tracking-[0.15em] mb-2">Identify</p>
+                        <p id="disp-username" class="text-2xl font-bold text-slate-900 group-hover:text-blue-600 transition-colors">-</p>
                     </div>
                     <div>
-                        <p class="text-sm text-gray-400 uppercase font-bold tracking-wider">Role</p>
-                        <span id="disp-role" class="inline-block mt-1 px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-black uppercase">-</span>
+                        <p class="text-[11px] text-slate-400 uppercase font-black tracking-[0.15em] mb-2">Access Level</p>
+                        <span id="disp-role" class="inline-flex items-center px-4 py-1.5 bg-blue-50 text-blue-700 rounded-full text-xs font-bold uppercase tracking-wide border border-blue-100">-</span>
                     </div>
-                    <div>
-                        <p class="text-sm text-gray-400 uppercase font-bold tracking-wider">Email</p>
-                        <p id="disp-email" class="text-xl font-semibold text-gray-900">-</p>
+                    <div class="group">
+                        <p class="text-[11px] text-slate-400 uppercase font-black tracking-[0.15em] mb-2">Contact</p>
+                        <p id="disp-email" class="text-lg font-medium text-slate-700">-</p>
                     </div>
-                    <div>
-                        <p class="text-sm text-gray-400 uppercase font-bold tracking-wider">Documents Inserted</p>
-                        <p id="disp-docs" class="text-3xl font-bold text-blue-600">-</p>
+                    <div class="bg-slate-50 p-4 rounded-2xl border border-slate-100 flex items-center justify-between">
+                        <div>
+                            <p class="text-[11px] text-slate-400 uppercase font-black tracking-[0.15em] mb-1">Knowledge Contribution</p>
+                            <p id="disp-docs" class="text-3xl font-black text-slate-900">-</p>
+                        </div>
+                        <div class="bg-white p-3 rounded-xl shadow-sm text-blue-600">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                        </div>
                     </div>
                 </div>
             </div>
 
-            <div id="adminPanel" class="hidden bg-white p-8 rounded-xl shadow-lg border-t-4 border-blue-600">
-                <h2 class="text-xl font-bold mb-2 text-gray-800">Admin: Invite Users</h2>
-                <p class="text-xs text-gray-400 mb-6">Add multiple users and assign their roles before sending.</p>
-                
-                <div id="inviteList" class="space-y-3 mb-4">
+            <div class="bg-white p-8 rounded-3xl shadow-sm border border-slate-100">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8">
+                    <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                        <span class="w-2 h-6 bg-blue-600 rounded-full"></span>
+                        Knowledge Categories
+                    </h2>
+                    <button id="addCategoryBtn" class="hidden flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-blue-600 transition-all shadow-lg shadow-slate-200">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Add Category
+                    </button>
+                </div>
+                <div id="categoryList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="animate-pulse flex space-x-4">
+                        <div class="h-12 bg-slate-100 rounded-xl w-full"></div>
                     </div>
-
-                <button id="addInviteRow" class="w-full mb-6 py-2 border-2 border-dashed border-gray-300 rounded-lg text-gray-500 hover:border-blue-400 hover:text-blue-500 transition flex justify-center items-center font-medium">
-                    <span class="mr-1 text-lg">+</span> Add Another
-                </button>
-                
-                <button id="sendInvites" class="w-full bg-blue-600 text-white p-3 rounded-lg font-bold hover:bg-blue-700 transition">
-                    Send All Invitations
-                </button>
-                
-                <p id="inviteMsg" class="mt-2 text-xs text-center font-semibold min-h-[1rem]"></p>
+                </div>
             </div>
-
         </div>
+
+        <div id="adminPanel" class="hidden lg:col-span-4">
+            <div class="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border-t-[6px] border-blue-600 sticky top-8">
+                <h2 class="text-xl font-bold mb-2 text-slate-900">Invite Team Members</h2>
+                <p class="text-sm text-slate-500 mb-8">Onboard new users to your group instantly.</p>
+                
+                <div id="inviteList" class="space-y-4 mb-6">
+                </div>
+
+                <button id="addInviteRow" class="w-full mb-6 py-3 border-2 border-dashed border-slate-200 rounded-2xl text-slate-400 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/50 transition-all flex justify-center items-center font-bold text-sm">
+                    <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path></svg>
+                    Add Recipient
+                </button>
+                
+                <button id="sendInvites" class="w-full bg-blue-600 text-white p-4 rounded-2xl font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 active:scale-[0.98]">
+                    Send Invitations
+                </button>
+                
+                <p id="inviteMsg" class="mt-4 text-xs text-center font-bold min-h-[1.25rem]"></p>
+            </div>
+        </div>
+
     </div>
+</div>
 
-    <script type="module">
-    import { apiRequest } from './api.js';
+<script type="module">
+import { apiRequest } from './api.js';
 
-    const inviteListContainer = document.getElementById('inviteList');
+const inviteListContainer = document.getElementById('inviteList');
+const categoryList = document.getElementById('categoryList');
+let currentUser = null;
 
-    function createInviteRow() {
-        const row = document.createElement('div');
-        row.className = "flex gap-2 items-center invite-row animate-in fade-in duration-300";
-        row.innerHTML = `
-            <input type="email" placeholder="Email" class="invite-email flex-1 border border-gray-200 p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-            <select class="invite-role border border-gray-200 p-2 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-                <option value="USER">USER</option>
-                <option value="ADMIN">ADMIN</option>
+function createInviteRow() {
+    const row = document.createElement('div');
+    row.className = "flex flex-col gap-2 p-4 bg-slate-50 rounded-2xl border border-slate-100 invite-row animate-in slide-in-from-top-2 duration-300 relative group";
+    row.innerHTML = `
+        <input type="email" placeholder="Team member email" class="invite-email w-full bg-white border border-slate-200 p-2.5 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all">
+        <div class="flex gap-2">
+            <select class="invite-role flex-1 bg-white border border-slate-200 p-2.5 rounded-xl text-sm font-semibold focus:ring-2 focus:ring-blue-500 outline-none appearance-none cursor-pointer">
+                <option value="USER">USER ROLE</option>
+                <option value="ADMIN">ADMIN ROLE</option>
             </select>
-            <button class="remove-row text-gray-300 hover:text-red-500 px-2 transition">×</button>
-        `;
-        row.querySelector('.remove-row').addEventListener('click', () => {
-            if (document.querySelectorAll('.invite-row').length > 1) row.remove();
-        });
-        inviteListContainer.appendChild(row);
-    }
+            <button class="remove-row bg-white border border-slate-200 text-slate-300 hover:text-red-500 hover:border-red-100 px-3 rounded-xl transition-all shadow-sm">
+                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+        </div>
+    `;
+    row.querySelector('.remove-row').addEventListener('click', () => {
+        if (document.querySelectorAll('.invite-row').length > 1) row.remove();
+    });
+    inviteListContainer.appendChild(row);
+}
 
-    async function loadProfile() {
-        // If apiRequest returns null, it means it already handled the 401/403 redirect
-        const res = await apiRequest("/me"); 
-        if (!res || !res.ok) return;
-
-        const user = await res.json();
-        document.getElementById('disp-username').textContent = user.username;
-        document.getElementById('disp-email').textContent = user.email;
-        document.getElementById('disp-role').textContent = user.role;
-        document.getElementById('disp-docs').textContent = user.doc_count ?? 0;
-
-        if (user.role === "ADMIN") {
-            document.getElementById('adminPanel').classList.remove('hidden');
-            if (inviteListContainer.children.length === 0) createInviteRow();
-        }
-    }
-
-    document.getElementById('addInviteRow').addEventListener('click', createInviteRow);
-
-    document.getElementById('sendInvites').addEventListener('click', async () => {
-        const inviteMsg = document.getElementById('inviteMsg');
-        const rows = document.querySelectorAll('.invite-row');
+async function fetchAndDisplayCategories() {
+    const res = await apiRequest("/fetch-categories");
+    if (!res || !res.ok) return;
+    const categories = await res.json();
+    
+    categoryList.innerHTML = '';
+    Object.entries(categories).forEach(([id, name]) => {
+        const card = document.createElement('div');
+        card.className = "flex justify-between items-center p-5 bg-white rounded-2xl border border-slate-100 hover:border-blue-200 hover:shadow-md hover:shadow-blue-500/5 transition-all group";
         
-        const invites = Array.from(rows).map(row => ({
-            email: row.querySelector('.invite-email').value.trim(),
-            role: row.querySelector('.invite-role').value,
-            group_uid: "00000000-0000-0000-0000-000000000000" // Use a valid UUID string if backend requires it
-        })).filter(invite => invite.email !== "");
-
-        if (invites.length === 0) {
-            inviteMsg.textContent = "Please enter an email.";
-            inviteMsg.className = "mt-2 text-xs text-center text-red-500";
-            return;
+        let actionsHtml = '';
+        if (currentUser && currentUser.role === "ADMIN") {
+            actionsHtml = `
+                <div class="flex gap-1">
+                    <button class="edit-cat text-slate-300 hover:text-blue-600 hover:bg-blue-50 p-2 rounded-lg transition-all" data-id="${id}" data-name="${name}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                    </button>
+                    <button class="delete-cat text-slate-300 hover:text-red-600 hover:bg-red-50 p-2 rounded-lg transition-all" data-id="${id}">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                    </button>
+                </div>
+            `;
         }
 
-        inviteMsg.textContent = "Sending...";
-        // Note: Pass 'invites' as an OBJECT, api.js will stringify it
-        const res = await apiRequest("/invite-user", {
-            method: "POST",
-            body: invites 
+        card.innerHTML = `
+            <div class="flex items-center gap-3">
+                <div class="w-2 h-2 rounded-full bg-blue-400 group-hover:scale-150 transition-transform"></div>
+                <span class="text-sm font-bold text-slate-700">${name}</span>
+            </div>
+            ${actionsHtml}
+        `;
+        categoryList.appendChild(card);
+    });
+
+    document.querySelectorAll('.delete-cat').forEach(btn => {
+        btn.onclick = async () => {
+            const id = btn.getAttribute('data-id');
+            if (confirm("Permanently delete this category?")) {
+                const params = new URLSearchParams({ cat_id: id });
+                const res = await apiRequest(`/delete-category?${params.toString()}`);
+                if (res && res.ok) fetchAndDisplayCategories();
+            }
+        };
+    });
+
+    document.querySelectorAll('.edit-cat').forEach(btn => {
+        btn.onclick = async () => {
+            const id = btn.getAttribute('data-id');
+            const oldName = btn.getAttribute('data-name');
+            const newName = prompt("Rename Category:", oldName);
+            if (newName && newName !== oldName) {
+                const res = await apiRequest("/update-category", {
+                    method: "POST",
+                    body: { id: parseInt(id), new_name: newName }
+                });
+                if (res && res.ok) fetchAndDisplayCategories();
+            }
+        };
+    });
+}
+
+async function loadProfile() {
+    const res = await apiRequest("/me"); 
+    if (!res || !res.ok) return;
+
+    currentUser = await res.json();
+    document.getElementById('disp-username').textContent = currentUser.username;
+    document.getElementById('disp-email').textContent = currentUser.email;
+    document.getElementById('disp-role').textContent = currentUser.role;
+    document.getElementById('disp-docs').textContent = currentUser.doc_count ?? 0;
+
+    if (currentUser.role === "ADMIN") {
+        document.getElementById('adminPanel').classList.remove('hidden');
+        document.getElementById('addCategoryBtn').classList.remove('hidden');
+        if (inviteListContainer.children.length === 0) createInviteRow();
+    }
+
+    fetchAndDisplayCategories();
+}
+
+document.getElementById('addCategoryBtn').addEventListener('click', async () => {
+    const name = prompt("New Category Name:");
+    if (name) {
+        const params = new URLSearchParams({ cat_name: name });
+        const res = await apiRequest(`/add-category?${params.toString()}`, {
+            method: "POST"
         });
+        if (res && res.ok) fetchAndDisplayCategories();
+    }
+});
 
-        if (res && res.ok) {
-            inviteMsg.textContent = "Invitations sent!";
-            inviteMsg.className = "mt-2 text-xs text-center text-green-600";
-            inviteListContainer.innerHTML = '';
-            createInviteRow();
-        } else {
-            inviteMsg.textContent = "Error sending invites.";
-            inviteMsg.className = "mt-2 text-xs text-center text-red-500";
-        }
+document.getElementById('addInviteRow').addEventListener('click', createInviteRow);
+
+document.getElementById('sendInvites').addEventListener('click', async () => {
+    const inviteMsg = document.getElementById('inviteMsg');
+    const rows = document.querySelectorAll('.invite-row');
+    
+    const invites = Array.from(rows).map(row => ({
+        email: row.querySelector('.invite-email').value.trim(),
+        role: row.querySelector('.invite-role').value,
+    })).filter(invite => invite.email !== "");
+
+    if (invites.length === 0) {
+        inviteMsg.textContent = "Please provide an email.";
+        inviteMsg.className = "mt-4 text-xs text-center text-red-500 font-bold";
+        return;
+    }
+
+    inviteMsg.textContent = "Processing invitations...";
+    inviteMsg.className = "mt-4 text-xs text-center text-blue-600 font-bold animate-pulse";
+    const res = await apiRequest("/invite-user", {
+        method: "POST",
+        body: invites 
     });
 
-    document.getElementById('logoutBtn').addEventListener('click', () => {
-        localStorage.removeItem("accessToken");
-        window.location.href = "/static/sign-in.html";
-    });
+    if (res && res.ok) {
+        inviteMsg.textContent = "Success! Team members notified.";
+        inviteMsg.className = "mt-4 text-xs text-center text-green-500 font-bold";
+        inviteListContainer.innerHTML = '';
+        createInviteRow();
+    } else {
+        inviteMsg.textContent = "System error. Please verify emails.";
+        inviteMsg.className = "mt-4 text-xs text-center text-red-500 font-bold";
+    }
+});
 
-    // Start loading immediately
-    loadProfile();
-</script>
-</body>
-</html>
+document.getElementById('logoutBtn').addEventListener('click', () => {
+    localStorage.removeItem("accessToken");
+    window.location.href = "/static/sign-in.html";
+});
+
+loadProfile();
+</script> </body> </html>

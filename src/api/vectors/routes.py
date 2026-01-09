@@ -3,14 +3,16 @@ from pydantic import TypeAdapter
 from fastapi import APIRouter, Depends, UploadFile, Security, Form, File
 from fastapi import BackgroundTasks
 
-from src.api.documents.service import DocumentService
-from src.api.documents.schemas import DocumentAdd
-from src.api.users.service import UserService
-from src.api.groups.service import GroupService
 from src.core.db.unit_of_work import UnitOfWork, get_uow
+from src.api.users.service import UserService
+from src.api.categories.service import CategoryService
+from src.api.documents.service import DocumentService
+from src.api.vectors.service import VectorService, get_querying_vector_service
+
+from src.api.documents.schemas import DocumentAdd
 from src.api.users.schemas import UserGet
 from src.api.vectors.schemas import QueryFilters
-from src.api.vectors.service import VectorService, get_querying_vector_service
+
 from src.core.inference.tasks import compute_and_insert_embeddings
 
 from src.core.utils.file_manager import FileManager, get_file_man
@@ -19,7 +21,6 @@ from src.core.utils.cache_manager import CacheManager, get_cache_manager
 from src.core.utils.url_tokenizer import URLTokenizer, TokenType
 
 from src.auth.dependencies import RoleChecker
-
 from src.errors.exceptions import BadRequest
 
 
@@ -100,18 +101,3 @@ async def search(query: str, query_filters: str,
     return query_res
 
 
-@vector_router.get("/fetch-categories")
-async def fetch_group_categories(curr_user: UserGet = Security(RoleChecker(["ADMIN", "USER"])), 
-                                 uow: UnitOfWork = Depends(get_uow),
-                                 cache_man: CacheManager = Depends(get_cache_manager)):
-    group_uid = str(curr_user.group.uid)
-    group_categories = await cache_man.get_cached_categories(group_uid)
-
-    if not bool(group_categories):
-        async with uow:
-            group_service = GroupService(uow)
-            group_categories = await group_service.get_group_categories(group_uid)
-
-        await cache_man.set_cached_categories(group_uid, group_categories) 
-
-    return group_categories

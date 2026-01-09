@@ -13,6 +13,7 @@ from src.api.groups.routes import group_router
 from src.api.users.routes import user_router
 from src.api.vectors.routes import vector_router
 from src.api.documents.routes import doc_router
+from src.api.categories.routes import cat_router
 
 from src.core.config.db import DBConfig
 from src.core.config.app import AppConfig
@@ -74,6 +75,7 @@ app.include_router(group_router, tags=["groups"])
 app.include_router(user_router, tags=["users"])
 app.include_router(vector_router, tags=["vectors"])
 app.include_router(doc_router, tags=["documents"])
+app.include_router(cat_router, tags=["categories"])
 
 @app.exception_handler(AppError)
 async def app_error_handler(request: Request, exc: AppError):

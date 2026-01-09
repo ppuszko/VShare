@@ -38,8 +38,6 @@
             const container = document.getElementById('content-area');
             
             try {
-                // CHANGE: Use apiRequest instead of native fetch
-                // This ensures Authorization headers are added and 401s trigger a refresh
                 const response = await apiRequest(`/static/${pageName}`);
                 
                 if (!response || !response.ok) {
@@ -48,10 +46,8 @@
                 
                 const html = await response.text();
                 
-                // Inject the content
                 container.innerHTML = html;
 
-                // Re-execute scripts
                 const scripts = container.querySelectorAll("script");
                 scripts.forEach(oldScript => {
                     const newScript = document.createElement("script");

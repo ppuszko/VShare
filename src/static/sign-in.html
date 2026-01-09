@@ -34,7 +34,6 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
   const emailVal = document.getElementById("email").value;
   const passwordVal = document.getElementById("password").value;
 
-  // Clear previous messages
   message.textContent = "";
 
   try {
@@ -44,15 +43,12 @@ document.getElementById("loginForm").addEventListener("submit", async (e) => {
       body: JSON.stringify({ email: emailVal, password: passwordVal })
     });
 
-    // Since the endpoint returns a raw string or a JSON string
     const data = await res.json();
 
     if (!res.ok) {
-      // Display the specific error from FastAPI (like "Invalid email or password")
       message.textContent = "Invalid email or password";
       message.className = "text-center mt-4 text-sm font-medium text-red-500";
     } else {
-      // SAVE ACCESS TOKEN (Now 'data' is just the token string)
       localStorage.setItem("accessToken", data);
 
       message.textContent = "Logged in successfully!";

@@ -13,7 +13,6 @@ export async function apiRequest(endpoint, options = {}) {
         const headers = { ...options.headers };
         if (token) headers["Authorization"] = `Bearer ${token}`;
         
-        // ONLY add Content-Type: application/json if we are NOT sending FormData
         if (options.body && !(options.body instanceof FormData)) {
             headers["Content-Type"] = "application/json";
         }
@@ -21,7 +20,6 @@ export async function apiRequest(endpoint, options = {}) {
     };
 
     let requestBody = options.body;
-    // Only stringify if it's a plain object, NOT FormData
     if (requestBody && typeof requestBody === 'object' && !(requestBody instanceof FormData)) {
         requestBody = JSON.stringify(requestBody);
     }
@@ -38,7 +36,6 @@ export async function apiRequest(endpoint, options = {}) {
 
         let response = await fetch(`${API_BASE_URL}${endpoint}`, fetchOptions);
 
-        // --- 1. HANDLE 403 FORBIDDEN / INVALID ---
         if (response.status === 403) {
             console.warn("Access forbidden or token invalid. Redirecting to login...");
             localStorage.removeItem("accessToken");
@@ -46,7 +43,6 @@ export async function apiRequest(endpoint, options = {}) {
             return null;
         }
 
-        // --- 2. HANDLE 401 EXPIRED (SILENT REFRESH) ---
         if (response.status === 401) {
             if (isRefreshing) {
                 return new Promise((resolve) => {

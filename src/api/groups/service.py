@@ -44,16 +44,3 @@ class GroupService:
         raise ForbiddenError(detail="There is already a group registered under this name!")
     
 
-    async def get_group_categories(self, group_uid: str) -> dict:
-        if not await self.group_exist(group_uid):
-            raise NotFoundError
-        
-        group_categories = (await self._session.exec(select(Category).where(Category.group_uid == group_uid))).all()
-        default_categories = (await self._session.exec(select(Category).where(Category.group_uid == None))).all()
-        
-        categories = {cat.id : cat.name for cat in group_categories}
-        categories.update(
-            {cat.id : cat.name for cat in default_categories}
-        )
-
-        return categories

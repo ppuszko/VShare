@@ -99,6 +99,7 @@ class UserService:
         
         return access_token
     
+    
     async def update_doc_count(self, doc_count: int, user_uid: str) -> None:
         user = await self.get_user_by_uid(user_uid)
         user.doc_count += doc_count

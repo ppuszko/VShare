@@ -1,6 +1,6 @@
 from pathlib import Path
 
-from sqlalchemy import select
+from sqlmodel import select
 
 from src.core.db.unit_of_work import UnitOfWork
 from src.core.db.models import Document
@@ -43,7 +43,7 @@ class DocumentService:
     async def extend_document_metadata(self, documents: list[dict]) -> list[dict]:
         doc_ids = set(item["doc_id"] for item in documents)
         result = await self._session.exec(select(Document).where(Document.id.in_(doc_ids)))  # type: ignore[arg-type]
-        result = result.scalars().all()
+        result = result.all()
         if not result:
             raise NotFoundError
         

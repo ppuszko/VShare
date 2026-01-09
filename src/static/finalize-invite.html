@@ -33,9 +33,7 @@
 
     <script>
         const API_BASE_URL = "http://localhost:8000";
-
-        // 1. Extract token from URL path. 
-        // Example URL: /static/finalize-invite.html?token=abc...
+        
         const urlParams = new URLSearchParams(window.location.search);
         const token = urlParams.get('token');
 
@@ -51,13 +49,10 @@
             }
 
             try {
-                // 2. Validate the token with a GET request
-                // Using the endpoint you specified: /validate-invite/{token}
                 const res = await fetch(`${API_BASE_URL}/validate-invite/${token}`);
 
                 if (res.ok) {
                     const data = await res.json();
-                    // Assuming data returns { email, role, group_name }
                     infoText.innerHTML = `Welcome! You've been invited as <b>${data.role}</b> to join <b>${data.group_name || 'the team'}</b>.`;
                     form.classList.remove('hidden');
                 } else {
@@ -71,7 +66,6 @@
             }
         }
 
-        // 3. Handle the actual registration (POST)
         form.addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -84,7 +78,6 @@
             msg.className = "mt-4 text-center text-blue-500";
 
             try {
-                // Assuming registration is POST /redeem-invite/{token}
                 const res = await fetch(`${API_BASE_URL}/redeem-invite/${token}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
@@ -106,7 +99,6 @@
             }
         });
 
-        // Run on load
         init();
     </script>
 </body>

@@ -43,7 +43,7 @@
         const statusMsg = document.getElementById('statusMsg');
 
         let selectedFiles = [];
-        let groupCategories = {}; // Data format: { "1": "CategoryName", "2": "OtherName" }
+        let groupCategories = {};
 
         async function initCategories() {
             try {
@@ -63,7 +63,6 @@
         function updateFileList() {
             fileList.innerHTML = selectedFiles.length > 0 ? '<h3 class="font-bold text-gray-700 border-b pb-2 text-sm">File Details & Category</h3>' : '';
             
-            // Explicitly mapping: id (key) to value, name (value) to display text
             const categoryOptions = Object.entries(groupCategories).map(([cat_id, cat_name]) => {
                 return `<option value="${cat_id}">${cat_name}</option>`;
             }).join('');
@@ -134,7 +133,6 @@
                 };
             });
 
-            // Final safety check before sending
             if (metadata.some(m => m.category_id === null)) {
                 statusMsg.className = "p-4 rounded-lg text-sm font-medium bg-red-100 text-red-700";
                 statusMsg.textContent = "Error: One or more categories are invalid. Ensure categories are loaded.";

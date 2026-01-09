@@ -2,6 +2,7 @@ from redis.asyncio import Redis, ConnectionPool
 from fastapi import Request, Depends
 
 from src.core.config.db import DBConfig
+from src.api.categories.schemas import CategoryGet
 
 
 def init_redis() -> Redis:
@@ -36,7 +37,14 @@ class CacheManager:
         categories = await self._redis.hgetall(f"categories:{group_uid}") # type: ignore[reportGeneralTypeIssues]
         return categories
     
+
+    async def add_or_update_cached_category(self, group_uid: str, category: CategoryGet):
+        await self._redis.hset(f"categories:{group_uid}", category.id, category.name) # type: ignore[reportGeneralTypeIssues]
+
+
+    async def delete_cached_category(self, group_uid: str, id: int):
+        await self._redis.hdel(f"categories:{group_uid}", str(id)) # type: ignore[reportGeneralTypeIssues]
+
+
     async def set_cached_categories(self, group_uid: str, categories: dict):
-        to_delete = [key for _, key in (await self.get_cached_categories(group_uid)).items()]
-        await self._redis.hdel(f"categories:{group_uid}", *to_delete) # type: ignore[reportGeneralTypeIssues]
         await self._redis.hset(f"categories:{group_uid}", mapping=categories) # type: ignore[reportGeneralTypeIssues]
