@@ -6,6 +6,8 @@ from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 
+from langchain.agents import create_agent
+from langchain_ollama import ChatOllama
 
 from src.errors.exceptions import AppError
 
@@ -29,6 +31,7 @@ from src.api.vectors.main import (
     init_vector_collection
 )
 
+from src.api.agents.agent_man import AgentManager 
 
 import traceback
 
@@ -48,6 +51,13 @@ async def lifespan(app: FastAPI):
     app.state.redis = init_redis()
 
     app.state.fastmail = init_mail()
+
+    model = ChatOllama(model="qwen3:4b", temperature=0.1)
+    agent = create_agent(model=model, system_prompt="You are a helpful assistant. Give broad and exhaustive responses", )
+    agent_man = AgentManager(agent)
+    
+
+    app.state.agent_man = agent_man
 
     yield
 

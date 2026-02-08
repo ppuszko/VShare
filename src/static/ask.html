@@ -1,0 +1,104 @@
+<div class="max-w-4xl mx-auto flex flex-col h-[calc(100vh-120px)] p-4">
+    <div id="chat-container" class="flex-1 overflow-y-auto space-y-4 p-4 bg-white rounded-xl shadow-inner border border-gray-100 scroll-smooth">
+        <div class="flex justify-start">
+            <div class="bg-blue-100 text-blue-800 p-3 rounded-lg max-w-[80%]">
+                Hello! I am your AI agent. Ask me anything about your data.
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-4 relative">
+        <form id="ask-form" class="flex gap-2">
+            <textarea 
+                id="user-input" 
+                rows="1"
+                placeholder="Ask your question..." 
+                class="w-full p-4 pr-12 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none shadow-sm"
+            ></textarea>
+            <button 
+                type="submit" 
+                id="send-btn"
+                class="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-xl transition-all disabled:opacity-50"
+            >
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
+                </svg>
+            </button>
+        </form>
+    </div>
+</div>
+
+<script type="module">
+    import { apiRequest } from './api.js';
+
+    const chatContainer = document.getElementById('chat-container');
+    const askForm = document.getElementById('ask-form');
+    const userInput = document.getElementById('user-input');
+    const sendBtn = document.getElementById('send-btn');
+
+    function appendMessage(role, content) {
+        const wrapper = document.createElement('div');
+        wrapper.className = role === 'user' ? 'flex justify-end' : 'flex justify-start';
+        
+        const msgDiv = document.createElement('div');
+        msgDiv.className = role === 'user' 
+            ? 'bg-blue-600 text-white p-3 rounded-lg max-w-[80%]' 
+            : 'bg-gray-100 text-gray-800 p-3 rounded-lg max-w-[80%] whitespace-pre-wrap';
+        
+        msgDiv.innerText = content;
+        wrapper.appendChild(msgDiv);
+        chatContainer.appendChild(wrapper);
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+        return msgDiv;
+    }
+
+    askForm.onsubmit = async (e) => {
+        e.preventDefault();
+        const prompt = userInput.value.trim();
+        if (!prompt) return;
+
+        // UI Prep
+        appendMessage('user', prompt);
+        userInput.value = '';
+        sendBtn.disabled = true;
+        const aiMsgDiv = appendMessage('ai', '...'); // Placeholder for streaming
+
+        try {
+            // Using your existing apiRequest to handle Auth tokens
+            // Note: We use GET because your router specifies @vector_router.get("/ask")
+            const response = await apiRequest(`/ask?prompt=${encodeURIComponent(prompt)}`);
+
+            if (!response || !response.body) throw new Error("Failed to start stream");
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+            aiMsgDiv.innerText = ''; // Clear placeholder
+
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+                
+                const chunk = decoder.decode(value, { stream: true });
+                
+                // Remove 'data: ' prefix if you used it in your FastAPI response
+                //const cleanChunk = chunk.replace(/^data:\s*/gm, '');
+                aiMsgDiv.innerText += chunk;
+                
+                chatContainer.scrollTop = chatContainer.scrollHeight;
+            }
+
+        } catch (err) {
+            console.error("AI Error:", err);
+            aiMsgDiv.innerText = "Error: " + err.message;
+            aiMsgDiv.classList.add('text-red-500');
+        } finally {
+            sendBtn.disabled = false;
+        }
+    };
+
+    // Auto-resize textarea
+    userInput.addEventListener('input', function() {
+        this.style.height = 'auto';
+        this.style.height = (this.scrollHeight) + 'px';
+    });
+</script>

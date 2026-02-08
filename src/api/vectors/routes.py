@@ -1,13 +1,14 @@
 from pydantic import TypeAdapter
 
-from fastapi import APIRouter, Depends, UploadFile, Security, Form, File
-from fastapi import BackgroundTasks
+from fastapi import APIRouter, Depends, UploadFile, Security, Form, File, BackgroundTasks
+from fastapi.responses import StreamingResponse
 
 from src.core.db.unit_of_work import UnitOfWork, get_uow
 from src.api.users.service import UserService
 from src.api.categories.service import CategoryService
 from src.api.documents.service import DocumentService
 from src.api.vectors.service import VectorService, get_querying_vector_service
+from src.api.agents.agent_man import get_agent_man, AgentManager
 
 from src.api.documents.schemas import DocumentAdd
 from src.api.users.schemas import UserGet
@@ -101,3 +102,9 @@ async def search(query: str, query_filters: str,
     return query_res
 
 
+@vector_router.get("/ask")
+async def ask(prompt: str, agent_man: AgentManager = Depends(get_agent_man), user: UserGet = Security(RoleChecker(["USER", "ADMIN"]))):
+    return StreamingResponse(
+        agent_man.stream(prompt),
+        media_type="text/event-stream"
+    )
