@@ -1,28 +1,48 @@
-<div class="max-w-4xl mx-auto flex flex-col h-[calc(100vh-120px)] p-4">
-    <div id="chat-container" class="flex-1 overflow-y-auto space-y-4 p-4 bg-white rounded-xl shadow-inner border border-gray-100 scroll-smooth">
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/dompurify/dist/purify.min.js"></script>
+
+<style>
+    /* Style Markdown elements inside the AI bubble */
+    .prose h1, .prose h2, .prose h3 { font-weight: bold; margin-top: 0.5rem; margin-bottom: 0.5rem; }
+    .prose h1 { font-size: 1.25rem; }
+    .prose h2 { font-size: 1.15rem; }
+    .prose p { margin-bottom: 0.75rem; }
+    .prose ul { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 0.75rem; }
+    .prose table { border-collapse: collapse; width: 100%; margin-bottom: 1rem; font-size: 0.9rem; }
+    .prose th, .prose td { border: 1px solid #e5e7eb; padding: 0.5rem; text-align: left; }
+    .prose th { bg-color: #f9fafb; }
+    .prose blockquote { border-left: 4px solid #3b82f6; padding-left: 1rem; color: #4b5563; font-style: italic; }
+    .prose code { background: #f3f4f6; padding: 0.2rem 0.4rem; rounded: 0.25rem; font-family: monospace; }
+</style>
+
+<div class="max-w-5xl mx-auto flex flex-col h-[calc(100vh-140px)] p-4">
+    <div class="mb-4 flex items-center justify-between px-2">
+        <h2 class="text-xl font-bold text-gray-800">AI Assistant</h2>
+        <span class="text-xs bg-blue-100 text-blue-700 px-3 py-1 rounded-full font-semibold">Qwen 3 Streaming</span>
+    </div>
+
+    <div id="chat-container" class="flex-1 overflow-y-auto space-y-6 p-6 bg-white rounded-2xl shadow-sm border border-gray-200">
         <div class="flex justify-start">
-            <div class="bg-blue-100 text-blue-800 p-3 rounded-lg max-w-[80%]">
-                Hello! I am your AI agent. Ask me anything about your data.
+            <div class="flex flex-col space-y-1 max-w-[85%]">
+                <span class="text-[10px] font-bold text-gray-400 uppercase tracking-tighter ml-1">Assistant</span>
+                <div class="bg-gray-50 border border-gray-100 text-gray-800 px-4 py-3 rounded-2xl rounded-tl-none prose">
+                    <p>I can now render <b>Markdown</b>! Try asking for a table or a recipe.</p>
+                </div>
             </div>
         </div>
     </div>
 
-    <div class="mt-4 relative">
-        <form id="ask-form" class="flex gap-2">
+    <div class="mt-6">
+        <form id="ask-form" class="relative">
             <textarea 
                 id="user-input" 
                 rows="1"
-                placeholder="Ask your question..." 
-                class="w-full p-4 pr-12 rounded-xl border border-gray-300 focus:ring-2 focus:ring-blue-500 focus:outline-none resize-none shadow-sm"
+                placeholder="Type your message... (Enter to send)" 
+                class="w-full p-4 pr-14 rounded-2xl border border-gray-200 focus:border-blue-500 focus:ring-4 focus:ring-blue-500/10 focus:outline-none transition-all resize-none bg-white shadow-lg overflow-hidden"
             ></textarea>
-            <button 
-                type="submit" 
-                id="send-btn"
-                class="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-xl transition-all disabled:opacity-50"
-            >
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-6 h-6">
-                    <path stroke-linecap="round" stroke-linejoin="round" d="M6 12L3.269 3.126A59.768 59.768 0 0121.485 12 59.77 59.77 0 013.27 20.876L5.999 12zm0 0h7.5" />
-                </svg>
+            
+            <button type="submit" id="send-btn" class="absolute right-3 bottom-3 p-2.5 bg-blue-600 text-white rounded-xl hover:bg-blue-700 transition-all disabled:opacity-40 shadow-md">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="w-5 h-5"><path d="M3.478 2.405a.75.75 0 00-.926.94l2.432 7.905H13.5a.75.75 0 010 1.5H4.984l-2.432 7.905a.75.75 0 00.926.94 60.519 60.519 0 0018.445-8.986.75.75 0 000-1.218A60.517 60.517 0 003.478 2.405z" /></svg>
             </button>
         </form>
     </div>
@@ -36,69 +56,82 @@
     const userInput = document.getElementById('user-input');
     const sendBtn = document.getElementById('send-btn');
 
-    function appendMessage(role, content) {
+    // Handle Enter to Send
+    userInput.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' && !e.shiftKey) {
+            e.preventDefault();
+            askForm.dispatchEvent(new Event('submit'));
+        }
+    });
+
+    function createMessageBubble(role) {
         const wrapper = document.createElement('div');
         wrapper.className = role === 'user' ? 'flex justify-end' : 'flex justify-start';
         
-        const msgDiv = document.createElement('div');
-        msgDiv.className = role === 'user' 
-            ? 'bg-blue-600 text-white p-3 rounded-lg max-w-[80%]' 
-            : 'bg-gray-100 text-gray-800 p-3 rounded-lg max-w-[80%] whitespace-pre-wrap';
+        const inner = document.createElement('div');
+        inner.className = 'flex flex-col space-y-1 ' + (role === 'user' ? 'items-end max-w-[80%]' : 'items-start max-w-[85%]');
+
+        const label = document.createElement('span');
+        label.className = 'text-[10px] font-bold uppercase tracking-wider text-gray-400 px-1';
+        label.innerText = role === 'user' ? 'You' : 'Assistant';
+
+        const bubble = document.createElement('div');
+        bubble.className = role === 'user' 
+            ? 'bg-blue-600 text-white px-4 py-3 rounded-2xl rounded-tr-none shadow-md' 
+            : 'bg-white border border-gray-100 text-gray-800 px-4 py-3 rounded-2xl rounded-tl-none shadow-sm leading-relaxed prose';
         
-        msgDiv.innerText = content;
-        wrapper.appendChild(msgDiv);
+        const content = document.createElement('div');
+        
+        bubble.appendChild(content);
+        inner.appendChild(label);
+        inner.appendChild(bubble);
+        wrapper.appendChild(inner);
         chatContainer.appendChild(wrapper);
-        chatContainer.scrollTop = chatContainer.scrollHeight;
-        return msgDiv;
+        
+        return content;
     }
 
     askForm.onsubmit = async (e) => {
         e.preventDefault();
         const prompt = userInput.value.trim();
-        if (!prompt) return;
+        if (!prompt || sendBtn.disabled) return;
 
-        // UI Prep
-        appendMessage('user', prompt);
+        const userContent = createMessageBubble('user');
+        userContent.innerText = prompt;
+        
         userInput.value = '';
         sendBtn.disabled = true;
-        const aiMsgDiv = appendMessage('ai', '...'); // Placeholder for streaming
+
+        const aiContent = createMessageBubble('ai');
+        aiContent.innerHTML = '<i>Thinking...</i>';
 
         try {
-            // Using your existing apiRequest to handle Auth tokens
-            // Note: We use GET because your router specifies @vector_router.get("/ask")
             const response = await apiRequest(`/ask?prompt=${encodeURIComponent(prompt)}`);
-
-            if (!response || !response.body) throw new Error("Failed to start stream");
+            if (!response || !response.body) throw new Error("Stream failed");
 
             const reader = response.body.getReader();
             const decoder = new TextDecoder();
-            aiMsgDiv.innerText = ''; // Clear placeholder
+            
+            let fullMarkdown = ""; // Accumulate the response
 
             while (true) {
                 const { value, done } = await reader.read();
                 if (done) break;
                 
                 const chunk = decoder.decode(value, { stream: true });
-                
-                // Remove 'data: ' prefix if you used it in your FastAPI response
-                //const cleanChunk = chunk.replace(/^data:\s*/gm, '');
-                aiMsgDiv.innerText += chunk;
+                fullMarkdown += chunk;
+
+                // Convert Markdown to HTML and sanitize it
+                const dirtyHtml = marked.parse(fullMarkdown);
+                aiContent.innerHTML = DOMPurify.sanitize(dirtyHtml);
                 
                 chatContainer.scrollTop = chatContainer.scrollHeight;
             }
 
         } catch (err) {
-            console.error("AI Error:", err);
-            aiMsgDiv.innerText = "Error: " + err.message;
-            aiMsgDiv.classList.add('text-red-500');
+            aiContent.innerHTML = `<span class="text-red-500">Error: ${err.message}</span>`;
         } finally {
             sendBtn.disabled = false;
         }
     };
-
-    // Auto-resize textarea
-    userInput.addEventListener('input', function() {
-        this.style.height = 'auto';
-        this.style.height = (this.scrollHeight) + 'px';
-    });
 </script>

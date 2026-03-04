@@ -1,30 +1,38 @@
-import asyncio 
 from typing import AsyncGenerator
 
-from fastapi import Request
+from fastapi.requests import Request
 
 from langchain.messages import HumanMessage
+from langchain_core.tools import BaseTool
+from langchain.agents import create_agent
 
-
+from src.core.config.agent import AgentConfig
 
 class AgentManager:
     def __init__(self, agent):
         self._agent = agent
-        self._lock = asyncio.Lock()
 
     async def stream(self, prompt: str) -> AsyncGenerator[str, None]:
-        async with self._lock:
-            try:
-                async for chunk in self._agent.astream({"messages":[HumanMessage(content=prompt)]}):
-                    if "actions" in chunk:
-                        yield f"{chunk['actions'][0].log}\n\n" 
-                    elif "steps" in chunk:
-                        yield f"{chunk['steps'][0].observation}\n\n"
-                    elif "output" in chunk:
-                        yield f"{chunk['output'][0]}\n\n"
-            except Exception as e:
-                yield f"data: Error: {str(e)}\n\n"
+        print("DEBUG: Starting LangChain astream...")
+        try:
+            async for event in self._agent.astream_events({"messages":[HumanMessage(content=prompt)]}):
+                if event["event"] == "on_chat_model_stream":
+                    print(f"DEBUG: Yielding chunk")
+                    content = event["data"]["chunk"].content
+                    if content:
+                        yield content
+        except Exception as e:
+            yield f"data: Error: {str(e)}\n\n"
+        finally:
+            print("DEBUG: Releasing lock.")
 
 
-def get_agent_man(request: Request) -> AgentManager:
-    return request.app.state.agent_man
+def init_agent_man(tools: list[BaseTool], request: Request) -> AgentManager:
+    return AgentManager(
+        agent=create_agent(
+            model=request.app.state.agent_model,
+            system_prompt=AgentConfig.system_prompt,
+            tools=tools
+        )
+    )  
+

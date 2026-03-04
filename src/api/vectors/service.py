@@ -23,12 +23,11 @@ def get_querying_vector_service(args: tuple = Depends(get_querying_client_compon
 class VectorService:
 
     def __init__(
-            self, 
-            dense_model: TextEmbedding,
+            self, dense_model: TextEmbedding,
             sparse_model: SparseTextEmbedding, 
             multi_model: LateInteractionTextEmbedding, 
-            client: AsyncQdrantClient | QdrantClient
-    ):
+            client: AsyncQdrantClient | QdrantClient):
+        
         self._dense = dense_model
         self._sparse = sparse_model
         self._multi = multi_model
@@ -87,9 +86,9 @@ class VectorService:
         return splitter.split_text(doc)
 
 
-    async def query_db(self, filters: QueryFilters, query: str):
+    async def query_db(self, filters: QueryFilters, query: str) -> list[dict]:
         if not isinstance(self._client, AsyncQdrantClient):
-            raise TypeError("Vector Service initialized with QdrantClient instead of AsyncQdrantClient")
+            raise TypeError("Querying Vector Service should be initialized with AsyncQdrantClient.")
         global_filter = self._build_filter(filters)
         
         dense_query, sparse_query, multi_query = await self._get_query_embeddings(query)
@@ -115,12 +114,10 @@ class VectorService:
             with_payload=True
         )
 
-
         return self._process_retrieved_data(response)
 
 
     def _build_filter(self, filters: QueryFilters) -> models.Filter:
-            
         field_conditions: list[models.Condition] = [
             models.FieldCondition(
                 key="group_uid",
@@ -150,11 +147,10 @@ class VectorService:
 
 
     async def _get_query_embeddings(self, query: str) -> tuple[ndarray, dict, ndarray]:
-        def _helper(query):
-            dense = next(iter(self._dense.query_embed(query)))
-            sparse = next(iter(self._sparse.query_embed(query))).as_object()
-            multi = next(iter(self._multi.query_embed(query))) 
-            return dense, sparse, multi
+        dense = next(iter(self._dense.query_embed(query)))
+        sparse = next(iter(self._sparse.query_embed(query))).as_object()
+        multi = next(iter(self._multi.query_embed(query))) 
+        return dense, sparse, multi
         
         return await asyncio.to_thread(_helper, query)
 

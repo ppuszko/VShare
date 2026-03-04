@@ -47,13 +47,14 @@ async def invite_users(users_to_invite: list[UserInvite],
 
 @user_router.get("/validate-invite/{token}", status_code=status.HTTP_200_OK)
 async def validate_invite(token: str):
-    tokenizer = URLTokenizer(TokenType.INVITATION, 1000) # TODO: remove time limit 1000
+    tokenizer = URLTokenizer(TokenType.INVITATION, 1000)
     token_data = tokenizer.decode_url_safe_token(token)
 
     return JSONResponse(
         content={"email": token_data["email"],
         "group_name": token_data["group_name"],
         "role": token_data["role"]})
+
 
 
 

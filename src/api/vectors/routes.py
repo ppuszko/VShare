@@ -1,14 +1,18 @@
 from pydantic import TypeAdapter
+from datetime import datetime
 
 from fastapi import APIRouter, Depends, UploadFile, Security, Form, File, BackgroundTasks
 from fastapi.responses import StreamingResponse
+from fastapi.requests import Request
+
+from langchain.tools import tool
 
 from src.core.db.unit_of_work import UnitOfWork, get_uow
 from src.api.users.service import UserService
 from src.api.categories.service import CategoryService
 from src.api.documents.service import DocumentService
 from src.api.vectors.service import VectorService, get_querying_vector_service
-from src.api.agents.agent_man import get_agent_man, AgentManager
+from src.api.agents.agent_man import init_agent_man
 
 from src.api.documents.schemas import DocumentAdd
 from src.api.users.schemas import UserGet
@@ -94,16 +98,45 @@ async def search(query: str, query_filters: str,
                 filters.user_uid = user.uid
 
     query_res = await vector_service.query_db(filters, query)
-    async with uow:
-        doc_service = DocumentService(uow)
-        
-        query_res = await doc_service.extend_document_metadata(query_res)
+
+    if query_res:
+        async with uow:
+            doc_service = DocumentService(uow)
+            
+            query_res = await doc_service.extend_document_metadata(query_res)
 
     return query_res
 
 
 @vector_router.get("/ask")
-async def ask(prompt: str, agent_man: AgentManager = Depends(get_agent_man), user: UserGet = Security(RoleChecker(["USER", "ADMIN"]))):
+async def ask(prompt: str, request: Request, 
+              user: UserGet = Security(RoleChecker(["USER", "ADMIN"])),
+              vector_service: VectorService = Depends(get_querying_vector_service)):
+    @tool
+    async def query_vector_db(query: str, 
+                              time_frame: tuple[datetime | None, datetime | None] = (None, None), 
+                              only_my_articles: bool = False) -> list[dict]:
+        """
+        Docstring for query_vector_db
+        
+        :param query: An accurate query for hybrid vector search engine that captures the essense of user's question.
+        :type query: str
+        :param time_frame: Optional time boundries of document's creation date.
+        :type time_frame: tuple[datetime | None, datetime | None]
+        :param only_my_articles: A boolean indicating if user wants to search across all dataset, or only across his own documents
+        :type only_my_articles: bool
+        :return: list of key - value pairs extracted from vector database thorugh hybrid search.
+        :rtype: list[dict[Any, Any]]
+        """
+        filters = QueryFilters(
+            group_uid=user.group.uid,
+            time_frame=time_frame,
+            only_my_articles=only_my_articles)
+
+        return await vector_service.query_db(filters=filters, query=query)
+
+    agent_man = init_agent_man([query_vector_db], request)
+
     return StreamingResponse(
         agent_man.stream(prompt),
         media_type="text/event-stream"

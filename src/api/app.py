@@ -49,15 +49,10 @@ async def lifespan(app: FastAPI):
     await init_vector_collection(vector_client)
 
     app.state.redis = init_redis()
-
     app.state.fastmail = init_mail()
 
-    model = ChatOllama(model="qwen3:4b", temperature=0.1)
-    agent = create_agent(model=model, system_prompt="You are a helpful assistant. Give broad and exhaustive responses", )
-    agent_man = AgentManager(agent)
-    
-
-    app.state.agent_man = agent_man
+    agent_model = ChatOllama(model="qwen3:4b", temperature=0.1)
+    app.state.agent_model = agent_model
 
     yield
 
@@ -77,6 +72,7 @@ app.add_middleware(
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"]
 )
 
 app.mount("/static", StaticFiles(directory="src/static", html=True), name="static")
